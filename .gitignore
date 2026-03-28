@@ -5,6 +5,7 @@ dist/
 .env
 .env.local
 *.log
+*.tsbuildinfo
 postgres_data/
 redis_data/
 .airails/.backups/
