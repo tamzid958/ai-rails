@@ -1,6 +1,6 @@
 {
   "name": "@airails/cli",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": {
@@ -15,8 +15,10 @@
   "dependencies": {
     "@airails/shared": "*",
     "chalk": "5.4.1",
+    "cli-table3": "0.6.5",
     "commander": "13.1.0",
-    "ora": "8.2.0"
+    "ora": "8.2.0",
+    "yaml": "2.7.1"
   },
   "devDependencies": {
     "tsx": "4.19.3"
