@@ -29,33 +29,20 @@ Both layers feed into the same activity log, the same dashboard, and the same ef
 
 ## Architecture
 
-```
-  CAPTURE LAYERS                              ANALYSIS
-  ─────────────                               ────────
-  ┌─────────────────┐  ┌──────────────────┐
-  │ Git-Native       │  │ Gateway Proxy     │
-  │                  │  │                   │
-  │ Config sync      │  │ Fastify + LiteLLM │
-  │ PR webhooks      │  │ Auth, logging,    │
-  │ Commit tagging   │  │ prompt injection  │
-  └────────┬─────────┘  └────────┬──────────┘
-           │                     │
-           ▼                     ▼
-  ┌──────────────────────────────────────────┐
-  │          UNIFIED ACTIVITY LOG            │
-  │  Gateway → rich (model, tokens, cost)    │
-  │  Tagged  → partial (tool, task, branch)  │
-  │  Untagged → minimal (heuristic signals)  │
-  └────────────────────┬─────────────────────┘
-                       │
-            ┌──────────┴──────────┐
-            ▼                     ▼
-  ┌──────────────────┐  ┌──────────────────┐
-  │    Dashboard      │  │  Effectiveness   │
-  │  Engineer + Team  │  │  Scoring Engine  │
-  │  views, costs,    │  │  PR correlation, │
-  │  config drift     │  │  prompt scoring  │
-  └──────────────────┘  └──────────────────┘
+```mermaid
+flowchart TD
+    subgraph Capture["Capture Layers"]
+        GN["Git-Native\nConfig sync · PR webhooks · Commit tagging"]
+        GP["Gateway Proxy\nFastify + LiteLLM · Auth · Prompt injection"]
+    end
+
+    GN --> UAL
+    GP --> UAL
+
+    UAL["Unified Activity Log\nGateway → rich · Tagged → partial · Untagged → minimal"]
+
+    UAL --> DB["Dashboard\nEngineer + Team views\nCosts · Config drift"]
+    UAL --> ES["Effectiveness Scoring\nPR correlation · Prompt scoring"]
 ```
 
 ## Services
@@ -120,28 +107,6 @@ airails/
 ├── phases/            # Implementation specs (13 phases)
 └── docker-compose.yml
 ```
-
----
-
-## Implementation Roadmap
-
-| Phase | What | Status |
-|-------|------|--------|
-| 1 | Foundation & Infrastructure | Done |
-| 2 | Database Schema & Auth | — |
-| 3 | Gateway Proxy Core | — |
-| 4 | Prompt Registry | — |
-| 5 | Config Sync Engine | — |
-| 6 | Webhook & PR Tracking | — |
-| 7 | Dashboard — Engineer View | — |
-| 8 | Dashboard — Team View | — |
-| 9 | Effectiveness Scoring | — |
-| 10 | CLI Tool | — |
-| 11 | Recommendations Engine | — |
-| 12 | Polish & Hardening | — |
-| 13 | Documentation & Launch | — |
-
-Full specs for each phase live in [`phases/`](phases/).
 
 ---
 
