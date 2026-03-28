@@ -248,6 +248,106 @@ export type RepoRow = {
   lastEventAt: string | null;
 };
 
+// ── Settings types ──
+
+export type ApiKeyRow = {
+  id: string;
+  label: string;
+  keyPrefix: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+
+export type ApiKeyCreateResponse = {
+  id: string;
+  rawKey: string;
+};
+
+export type MemberRow = {
+  id: string;
+  engineerId: string;
+  name: string;
+  email: string;
+  gitUsername: string | null;
+  role: "OWNER" | "LEAD" | "MEMBER";
+  createdAt: string;
+};
+
+export type SettingsRepoRow = {
+  id: string;
+  fullName: string;
+  provider: string;
+  webhookActive: boolean;
+  lastEventAt: string | null;
+  createdAt: string;
+};
+
+export type ProductSettings = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  allowedModels: string[];
+  defaultModel: string | null;
+  costAlertDaily: number | null;
+  costAlertEngineer: number | null;
+};
+
+export type ProviderModel = {
+  model: string;
+  provider: string;
+  allowed: boolean;
+  status: "ACTIVE" | "BLOCKED";
+};
+
+export type WebhookRepoStatus = {
+  id: string;
+  fullName: string;
+  webhookStatus: "CONNECTED" | "STALE" | "PENDING";
+  lastEventAt: string | null;
+};
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      (data as Record<string, string>).error ?? `API error: ${res.status}`,
+    );
+  }
+  return res.json() as Promise<T>;
+}
+
+async function patchJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      (data as Record<string, string>).error ?? `API error: ${res.status}`,
+    );
+  }
+  return res.json() as Promise<T>;
+}
+
+async function deleteJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, { method: "DELETE" });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      (data as Record<string, string>).error ?? `API error: ${res.status}`,
+    );
+  }
+  return res.json() as Promise<T>;
+}
+
 export const api = {
   getStats(productId: string, period: Period) {
     const { start, end } = periodToRange(period);
@@ -442,6 +542,98 @@ export const api = {
     return fetchJson<RepoRow[]>(
       `/api/team/repos?productId=${productId}`,
     );
+  },
+
+  // ── Settings endpoints ──
+
+  getApiKeys(productId: string) {
+    return fetchJson<ApiKeyRow[]>(
+      `/api/settings/keys?productId=${productId}`,
+    );
+  },
+
+  createApiKey(productId: string, label: string) {
+    return postJson<ApiKeyCreateResponse>(`/api/settings/keys`, {
+      productId,
+      label,
+    });
+  },
+
+  revokeApiKey(keyId: string) {
+    return deleteJson<{ success: boolean }>(`/api/settings/keys?id=${keyId}`);
+  },
+
+  getMembers(productId: string) {
+    return fetchJson<MemberRow[]>(
+      `/api/settings/members?productId=${productId}`,
+    );
+  },
+
+  addMember(productId: string, email: string, role: string) {
+    return postJson<MemberRow>(`/api/settings/members`, {
+      productId,
+      email,
+      role,
+    });
+  },
+
+  updateMemberRole(membershipId: string, role: string) {
+    return patchJson<{ success: boolean }>(`/api/settings/members`, {
+      membershipId,
+      role,
+    });
+  },
+
+  removeMember(membershipId: string) {
+    return deleteJson<{ success: boolean }>(
+      `/api/settings/members?id=${membershipId}`,
+    );
+  },
+
+  getSettingsRepos(productId: string) {
+    return fetchJson<SettingsRepoRow[]>(
+      `/api/settings/repos?productId=${productId}`,
+    );
+  },
+
+  addRepo(productId: string, fullName: string, provider: string) {
+    return postJson<SettingsRepoRow>(`/api/settings/repos`, {
+      productId,
+      fullName,
+      provider,
+    });
+  },
+
+  removeRepo(repoId: string) {
+    return deleteJson<{ success: boolean }>(
+      `/api/settings/repos?id=${repoId}`,
+    );
+  },
+
+  getProductSettings(productId: string) {
+    return fetchJson<ProductSettings>(
+      `/api/settings/product?productId=${productId}`,
+    );
+  },
+
+  updateProduct(productId: string, data: Partial<ProductSettings>) {
+    return patchJson<ProductSettings>(`/api/settings/product`, {
+      productId,
+      ...data,
+    });
+  },
+
+  getProviders(productId: string) {
+    return fetchJson<ProviderModel[]>(
+      `/api/settings/providers?productId=${productId}`,
+    );
+  },
+
+  getWebhookStatus(productId: string) {
+    return fetchJson<{
+      webhookUrl: string;
+      repos: WebhookRepoStatus[];
+    }>(`/api/settings/webhooks?productId=${productId}`);
   },
 };
 
