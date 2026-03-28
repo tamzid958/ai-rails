@@ -2,6 +2,7 @@
   "name": "@airails/dashboard",
   "version": "0.0.1",
   "private": true,
+  "license": "BUSL-1.1",
   "type": "module",
   "scripts": {
     "build": "next build",

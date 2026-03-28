@@ -136,4 +136,4 @@ See [docs/multi-product.md](docs/multi-product.md) for details.
 
 ## License
 
-[MIT](LICENSE)
+[BSL 1.1](LICENSE) — Source-available. Free for non-commercial use. Converts to Apache 2.0 on 2030-03-28.
