@@ -10,7 +10,9 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "echo 'no unit tests'",
+    "test:integration": "echo 'no integration tests'"
   },
   "dependencies": {
     "@airails/shared": "*",

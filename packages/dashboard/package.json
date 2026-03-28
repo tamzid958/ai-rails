@@ -7,7 +7,9 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run --config vitest.config.ts src/__tests__",
+    "test:integration": "echo 'no integration tests'"
   },
   "dependencies": {
     "@airails/shared": "*",

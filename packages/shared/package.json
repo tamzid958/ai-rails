@@ -15,7 +15,9 @@
     "build": "prisma generate --schema ../../prisma/schema.prisma && tsc",
     "dev": "tsc --watch",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run src/__tests__/utils.test.ts src/__tests__/schemas.test.ts",
+    "test:integration": "vitest run src/__tests__/product-context.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.6.0",

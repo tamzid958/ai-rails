@@ -7,7 +7,9 @@
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:unit": "echo 'no unit tests'",
+    "test:integration": "vitest run src/__tests__"
   },
   "dependencies": {
     "@airails/shared": "*",
