@@ -1,5 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": ["DATABASE_URL", "REDIS_URL", "AIRAILS_SECRET"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -19,7 +20,8 @@
       "dependsOn": ["^build"]
     },
     "test:integration": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "env": ["DATABASE_URL", "REDIS_URL"]
     }
   }
 }
