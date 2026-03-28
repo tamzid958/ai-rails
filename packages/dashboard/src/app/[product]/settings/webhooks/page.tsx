@@ -30,7 +30,19 @@ export default function WebhooksPage() {
   });
 
   function copyText(field: string, text: string) {
-    navigator.clipboard.writeText(text);
+    try {
+      navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for HTTP
+      const el = document.createElement("textarea");
+      el.value = text;
+      el.style.position = "fixed";
+      el.style.opacity = "0";
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
   }
