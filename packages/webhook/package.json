@@ -2,6 +2,7 @@
   "name": "@airails/webhook",
   "version": "0.0.1",
   "private": true,
+  "license": "BUSL-1.1",
   "type": "module",
   "scripts": {
     "build": "tsc",
@@ -9,7 +10,7 @@
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "test:unit": "echo 'no unit tests'",
-    "test:integration": "vitest run src/__tests__"
+    "test:integration": "vitest run src/__tests__ --fileParallelism=false"
   },
   "dependencies": {
     "@airails/shared": "*",
