@@ -96,3 +96,45 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(rows);
 }
+
+export async function POST(request: NextRequest) {
+  const engineer = await getEngineer();
+  const body = await request.json();
+  const { productId, taskType, name, content } = body;
+
+  if (!productId || !taskType || !name || !content) {
+    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  const membership = await prisma.productMembership.findUnique({
+    where: { productId_engineerId: { productId, engineerId: engineer.id } },
+  });
+  if (!membership || membership.role === "MEMBER") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Check if base already exists for this task type
+  const existing = await prisma.promptTemplate.findFirst({
+    where: { productId, taskType, isBase: true },
+  });
+  if (existing) {
+    return NextResponse.json({ error: `Base template for "${taskType}" already exists` }, { status: 409 });
+  }
+
+  const template = await prisma.promptTemplate.create({
+    data: {
+      productId,
+      taskType,
+      name,
+      content,
+      isBase: true,
+      version: 1,
+      usageCount: 0,
+      acceptanceRate: 0,
+      revisionRate: 0,
+      rejectionRate: 0,
+    },
+  });
+
+  return NextResponse.json({ id: template.id, taskType: template.taskType });
+}

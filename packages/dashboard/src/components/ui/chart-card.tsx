@@ -17,7 +17,7 @@ function ChartCard({ title, description, children, className, action }: ChartCar
         className,
       )}
     >
-      <div className="flex items-start justify-between mb-5">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
         <div>
           <h3 className="text-sm font-medium text-text-tertiary">{title}</h3>
           {description && <p className="text-xs text-text-tertiary mt-0.5">{description}</p>}

@@ -48,6 +48,7 @@ model Product {
   defaultModel       String?
   costAlertDaily     Float?
   costAlertEngineer  Float?
+  webhookSecret      String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

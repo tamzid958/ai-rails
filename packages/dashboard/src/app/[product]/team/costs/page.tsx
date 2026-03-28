@@ -7,13 +7,17 @@ import { api, type Period } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartCard } from "@/components/ui/chart-card";
 import { PeriodSelector } from "@/components/engineer/period-selector";
 import { SwissAreaChart } from "@/components/charts/swiss-line-chart";
-import { SwissHorizontalBar } from "@/components/charts/swiss-bar-chart";
+import { SwissDonutChart } from "@/components/charts/swiss-donut-chart";
+import { useChartColors } from "@/components/charts/use-chart-colors";
+import { AlertTriangle } from "lucide-react";
 
 export default function TeamCostsPage() {
   const { product } = useProduct();
   const [period, setPeriod] = useState<Period>("30d");
+  const chartColors = useChartColors();
 
   const { data: costStats, isLoading: statsLoading } = useQuery({
     queryKey: ["team-cost-stats", product.id, period],
@@ -41,144 +45,84 @@ export default function TeamCostsPage() {
   });
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-3">
-        <PageHeader title="Cost Center" />
-        <PeriodSelector value={period} onChange={setPeriod} />
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <PageHeader title="Cost Center" className="mb-0 pb-0" />
+          <p className="text-xs text-text-muted mt-1">Gateway-captured activity only</p>
+        </div>
+        <div className="mt-3 sm:mt-0">
+          <PeriodSelector value={period} onChange={setPeriod} />
+        </div>
       </div>
 
-      <p className="text-small text-gray-500 mb-3">
-        Cost data available for gateway-captured activity only.
-      </p>
-
       {costStats?.dailyExceeded && (
-        <div className="border border-warning bg-warning/10 p-2 mb-3">
-          <p className="text-body text-warning font-medium">
+        <div className="flex items-start gap-3 bg-warning/10 border border-warning/20 rounded-lg p-4">
+          <AlertTriangle size={16} strokeWidth={1.5} className="text-warning mt-0.5 shrink-0" />
+          <p className="text-sm text-warning">
             Daily cost threshold exceeded — avg ${costStats.avgPerDay.toFixed(2)}/day exceeds ${costStats.costAlertDaily?.toFixed(2)}/day limit
           </p>
         </div>
       )}
 
       {statsLoading ? (
-        <div className="grid grid-cols-3 gap-3 mb-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
       ) : costStats ? (
-        <div className="grid grid-cols-3 gap-3 mb-3">
-          <StatCard
-            title="Product Total"
-            value={`$${costStats.productTotal.toFixed(2)}`}
-          />
-          <StatCard
-            title="Avg / Day"
-            value={`$${costStats.avgPerDay.toFixed(2)}`}
-          />
-          <StatCard
-            title="Avg / Engineer"
-            value={`$${costStats.avgPerEngineer.toFixed(2)}`}
-          />
+        <div className="grid grid-cols-3 gap-4 stagger">
+          <StatCard title="Product Total" value={`$${costStats.productTotal.toFixed(2)}`} />
+          <StatCard title="Avg / Day" value={`$${costStats.avgPerDay.toFixed(2)}`} />
+          <StatCard title="Avg / Engineer" value={`$${costStats.avgPerEngineer.toFixed(2)}`} />
         </div>
       ) : null}
 
-      <div className="border border-gray-200 p-3 mb-3">
-        <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
-          Cost Trend
-        </h3>
-        {trendLoading ? (
-          <Skeleton className="h-75" />
-        ) : costTrend?.length ? (
-          <SwissAreaChart
-            data={costTrend}
-            xKey="date"
-            dataKey="cost"
-            label="Cost (USD)"
-            thresholdValue={costStats?.costAlertDaily ?? undefined}
-            tooltipFormatter={(value) => `$${value.toFixed(2)}`}
-          />
+      <ChartCard title="Cost Trend">
+        {trendLoading ? <Skeleton className="h-75" /> : costTrend?.length ? (
+          <SwissAreaChart data={costTrend} xKey="date" dataKey="cost" label="Cost (USD)" thresholdValue={costStats?.costAlertDaily ?? undefined} tooltipFormatter={(value) => `$${value.toFixed(2)}`} />
         ) : (
-          <p className="text-small text-gray-500 py-8 text-center">
-            No cost data for this period.
-          </p>
+          <p className="text-sm text-text-tertiary py-12 text-center">No cost data for this period.</p>
         )}
-      </div>
+      </ChartCard>
 
-      <div className="grid grid-cols-12 gap-3 mb-3">
-        <div className="col-span-6 border border-gray-200 p-3">
-          <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
-            By Engineer
-          </h3>
-          {engineerLoading ? (
-            <Skeleton className="h-50" />
-          ) : byEngineer?.length ? (
-            <div className="flex flex-col gap-2">
-              {byEngineer.map((e) => (
-                <div key={e.name} className="flex items-center gap-2">
-                  <span className="text-small text-gray-700 w-24 text-right truncate">
-                    {e.name}
-                  </span>
-                  <div className="flex-1 h-5 bg-gray-50">
-                    <div
-                      className="h-full"
-                      style={{
-                        width: `${(e.cost / Math.max(...byEngineer.map((x) => x.cost), 1)) * 100}%`,
-                        backgroundColor: e.exceeded ? "#CC1B1B" : "#0047FF",
-                      }}
-                    />
+      <ChartCard title="By Engineer">
+        {engineerLoading ? <Skeleton className="h-48" /> : byEngineer?.length ? (
+          <div className="flex flex-col gap-3">
+            {byEngineer.map((e, i) => {
+              const max = Math.max(...byEngineer.map((x) => x.cost), 1);
+              return (
+                <div key={e.name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ width: 96, textAlign: "right", fontSize: 13, color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.name}</span>
+                  <div style={{ flex: 1, height: 20, background: "var(--color-surface)", borderRadius: 2, overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${(e.cost / max) * 100}%`, backgroundColor: e.exceeded ? "var(--color-danger)" : chartColors[i % chartColors.length], borderRadius: 2 }} />
                   </div>
-                  <span className="text-small tabular-nums text-gray-700 w-16 text-right">
-                    ${e.cost.toFixed(2)}
-                  </span>
-                  {e.exceeded && (
-                    <span className="text-label text-danger uppercase tracking-[0.06em]">!</span>
-                  )}
+                  <span style={{ width: 64, textAlign: "right", fontSize: 13, color: "var(--color-text-secondary)" }} className="tabular-nums">${e.cost.toFixed(2)}</span>
+                  {e.exceeded && <span className="text-danger text-xs font-medium">!</span>}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-small text-gray-500 py-4 text-center">
-              No engineer cost data.
-            </p>
-          )}
-        </div>
-
-        <div className="col-span-6 border border-gray-200 p-3">
-          <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
-            By Model
-          </h3>
-          {modelLoading ? (
-            <Skeleton className="h-50" />
-          ) : byModel?.length ? (
-            <SwissHorizontalBar
-              items={byModel.map((m) => ({ label: m.model, value: m.count }))}
-            />
-          ) : (
-            <p className="text-small text-gray-500 py-4 text-center">
-              No model data.
-            </p>
-          )}
-        </div>
-      </div>
-
-      <div className="border border-gray-200 p-3">
-        <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
-          By Task Type
-        </h3>
-        {taskTypeLoading ? (
-          <Skeleton className="h-50" />
-        ) : byTaskType?.length ? (
-          <SwissHorizontalBar
-            items={byTaskType.map((t) => ({
-              label: t.taskType,
-              value: t.count,
-            }))}
-          />
+              );
+            })}
+          </div>
         ) : (
-          <p className="text-small text-gray-500 py-4 text-center">
-            No task type data.
-          </p>
+          <p className="text-sm text-text-tertiary py-8 text-center">No engineer cost data.</p>
         )}
+      </ChartCard>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard title="By Model" className="h-full">
+          {modelLoading ? <Skeleton className="h-48" /> : byModel?.length ? (
+            <SwissDonutChart items={byModel.map((m) => ({ label: m.model, value: m.count }))} maxItems={5} />
+          ) : (
+            <p className="text-sm text-text-tertiary py-8 text-center">No model data.</p>
+          )}
+        </ChartCard>
+
+        <ChartCard title="By Task Type" className="h-full">
+          {taskTypeLoading ? <Skeleton className="h-48" /> : byTaskType?.length ? (
+            <SwissDonutChart items={byTaskType.map((t) => ({ label: t.taskType, value: t.count }))} maxItems={6} />
+          ) : (
+            <p className="text-sm text-text-tertiary py-8 text-center">No task type data.</p>
+          )}
+        </ChartCard>
       </div>
     </div>
   );

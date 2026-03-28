@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { randomBytes } from "node:crypto";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
 
@@ -28,24 +29,45 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { webhookSecret: true },
+  });
+
+  // Auto-generate secret if missing
+  let webhookSecret = product?.webhookSecret;
+  if (!webhookSecret) {
+    webhookSecret = randomBytes(32).toString("hex");
+    await prisma.product.update({
+      where: { id: productId },
+      data: { webhookSecret },
+    });
+  }
+
   const repos = await prisma.repo.findMany({
     where: { productId },
     orderBy: { fullName: "asc" },
   });
 
-  const webhookUrl =
-    process.env["NEXT_PUBLIC_GATEWAY_URL"] ??
-    "http://localhost:8080";
+  const webhookBaseUrl = process.env["NEXT_PUBLIC_GATEWAY_URL"] ?? "http://localhost:8081";
 
   const repoStatuses = repos.map((r) => ({
     id: r.id,
     fullName: r.fullName,
+    provider: r.provider,
     webhookStatus: getWebhookStatus(r.webhookActive, r.lastEventAt),
     lastEventAt: r.lastEventAt?.toISOString() ?? null,
   }));
 
+  // Only show secret to LEAD/OWNER
+  const canSeeSecret = membership.role === "LEAD" || membership.role === "OWNER";
+
   return NextResponse.json({
-    webhookUrl: `${webhookUrl}/webhooks/github`,
+    webhookUrl: {
+      github: `${webhookBaseUrl}/webhooks/github`,
+      gitlab: `${webhookBaseUrl}/webhooks/gitlab`,
+    },
+    webhookSecret: canSeeSecret ? webhookSecret : null,
     repos: repoStatuses,
   });
 }

@@ -1,12 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useProduct } from "@/lib/product-context";
 import { api } from "@/lib/api-client";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles } from "lucide-react";
+import { Sparkles, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 const PRIORITY_CONFIG = {
   2: { label: "HIGH", variant: "error" },
@@ -14,18 +14,17 @@ const PRIORITY_CONFIG = {
   0: { label: "LOW", variant: "default" },
 } as const;
 
-function PriorityBadge({ priority }: { priority: number }) {
-  const config = PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG] ?? PRIORITY_CONFIG[0];
-  return <Badge variant={config.variant as "error" | "warning" | "default"}>{config.label}</Badge>;
-}
+const PAGE_SIZE = 3;
 
 export function InsightsCard() {
   const { product } = useProduct();
   const queryClient = useQueryClient();
+  const [page, setPage] = useState(0);
 
-  const { data: recs, isLoading } = useQuery({
-    queryKey: ["team-recommendations", product.id],
-    queryFn: () => api.getTeamRecommendations(product.id),
+  const { data, isLoading } = useQuery({
+    queryKey: ["team-recommendations", product.id, page],
+    queryFn: () => api.getTeamRecommendations(product.id, PAGE_SIZE, page * PAGE_SIZE),
+    placeholderData: (prev) => prev,
   });
 
   const dismissMutation = useMutation({
@@ -33,39 +32,48 @@ export function InsightsCard() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-recommendations", product.id] }),
   });
 
-  const activeRecs = recs?.filter((r) => !r.dismissedAt) ?? [];
+  const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  if (isLoading) return <div className="bg-surface-raised border border-border-subtle rounded-lg p-6"><Skeleton className="h-32" /></div>;
+  if (isLoading && !data) return <Skeleton className="h-20 rounded-lg" />;
+  if (total === 0) return null;
 
   return (
-    <div className="bg-surface-raised border border-border-subtle rounded-lg p-6">
-      <div className="flex items-center justify-between mb-4">
+    <div>
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Sparkles size={16} strokeWidth={1.5} className="text-accent" />
-          <h3 className="text-sm font-medium text-text-primary">Team Insights</h3>
+          <Sparkles size={14} strokeWidth={1.5} className="text-accent" />
+          <span className="text-xs font-medium text-text-tertiary">{total} insight{total !== 1 ? "s" : ""}</span>
         </div>
-        {activeRecs.length > 0 && <span className="text-xs text-text-tertiary">{activeRecs.length} new</span>}
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button disabled={page === 0} onClick={() => setPage((p) => p - 1)} className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 cursor-pointer disabled:cursor-default transition-colors">
+              <ChevronLeft size={14} strokeWidth={1.5} />
+            </button>
+            <span className="text-xs text-text-muted tabular-nums">{page + 1}/{totalPages}</span>
+            <button disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)} className="p-1 text-text-muted hover:text-text-primary disabled:opacity-30 cursor-pointer disabled:cursor-default transition-colors">
+              <ChevronRight size={14} strokeWidth={1.5} />
+            </button>
+          </div>
+        )}
       </div>
-
-      {activeRecs.length === 0 ? (
-        <p className="text-sm text-text-tertiary text-center py-4">No team insights right now.</p>
-      ) : (
-        <div className="space-y-4">
-          {activeRecs.map((rec) => (
-            <div key={rec.id} className="border-t border-border-subtle pt-4 first:border-t-0 first:pt-0">
-              <p className="text-sm text-text-secondary mb-3">{rec.body}</p>
-              <div className="flex items-center justify-between">
-                <div className="flex gap-2">
-                  {rec.type === "promote_override" && <Button variant="secondary" size="sm" disabled>Promote</Button>}
-                  {rec.type === "template_degradation" && <Button variant="secondary" size="sm" disabled>Review Template</Button>}
-                  <Button variant="ghost" size="sm" onClick={() => dismissMutation.mutate(rec.id)} loading={dismissMutation.isPending}>Dismiss</Button>
-                </div>
-                <PriorityBadge priority={rec.priority} />
+      <div className="flex flex-col gap-2">
+        {items.map((rec) => {
+          const config = PRIORITY_CONFIG[rec.priority as keyof typeof PRIORITY_CONFIG] ?? PRIORITY_CONFIG[0];
+          return (
+            <div key={rec.id} className="flex items-start gap-3 bg-surface rounded-lg border border-border-subtle p-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-text-secondary leading-relaxed">{rec.body}</p>
               </div>
+              <Badge variant={config.variant as "error" | "warning" | "default"} className="shrink-0 mt-0.5">{config.label}</Badge>
+              <button onClick={() => dismissMutation.mutate(rec.id)} className="text-text-muted hover:text-text-secondary cursor-pointer transition-colors shrink-0 mt-0.5 p-0.5" aria-label="Dismiss">
+                <X size={14} strokeWidth={1.5} />
+              </button>
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import clsx from "clsx";
 import {
   BarChart3, Activity, FileText, Target, Users, GitBranch, DollarSign,
   AlertTriangle, CheckCircle, Key, Layers, Webhook, Shield, ChevronLeft, Zap,
-  ChevronDown, Settings, Plus,
+  ChevronDown, Settings, Plus, BookOpen,
 } from "lucide-react";
 import { Tooltip } from "../ui/tooltip";
 
@@ -168,8 +168,23 @@ export function SidebarNav({ productSlug, canManageTeam, collapsed = false }: Si
     setOpenIndex(activeSection);
   }
 
+  const guideHref = `/${productSlug}/guide`;
+  const guideActive = pathname === guideHref;
+
   return (
     <nav className="flex flex-col gap-1 py-4 px-3">
+      {collapsed ? (
+        <Tooltip content="Guide" side="right">
+          <Link href={guideHref} className={clsx("flex items-center justify-center py-2.5 rounded-md transition-colors mb-2", guideActive ? "bg-accent/10 text-accent" : "text-text-tertiary hover:text-text-primary hover:bg-surface-raised")}>
+            <BookOpen size={18} strokeWidth={1.5} />
+          </Link>
+        </Tooltip>
+      ) : (
+        <Link href={guideHref} className={clsx("flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-md transition-colors mb-2", guideActive ? "bg-accent/10 text-accent font-medium" : "text-text-tertiary hover:text-text-primary hover:bg-surface-raised")}>
+          <BookOpen size={16} strokeWidth={1.5} />
+          <span>Guide</span>
+        </Link>
+      )}
       {sections.map((section, i) => (
         <CollapsibleSection
           key={section.title}

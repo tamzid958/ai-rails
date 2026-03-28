@@ -9,23 +9,18 @@ import { PageHeader } from "@/components/layout/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartCard } from "@/components/ui/chart-card";
+import { Select } from "@/components/ui/select";
 import { RichnessBadge } from "@/components/data-richness/richness-badge";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 
-const STATUS_VARIANT: Record<string, "default" | "info" | "success" | "warning" | "error"> = {
-  OPENED: "default",
-  REVIEW_IN_PROGRESS: "default",
+const STATUS_VARIANT: Record<string, "default" | "info" | "success" | "warning" | "error" | "outline" | "purple" | "cyan"> = {
+  OPENED: "info",
+  REVIEW_IN_PROGRESS: "cyan",
   CHANGES_REQUESTED: "warning",
-  APPROVED: "success",
-  MERGED: "info",
-  CLOSED: "error",
+  APPROVED: "purple",
+  MERGED: "success",
+  CLOSED: "default",
   REVERTED: "error",
 };
 
@@ -52,11 +47,7 @@ export default function TeamOutcomesPage() {
   const setFilter = useCallback(
     (key: string, value: string | null) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (value) {
-        params.set(key, value);
-      } else {
-        params.delete(key);
-      }
+      if (value) params.set(key, value); else params.delete(key);
       router.push(`?${params.toString()}`);
     },
     [searchParams, router],
@@ -66,73 +57,53 @@ export default function TeamOutcomesPage() {
   const [richnessFilter, setRichnessFilter] = useState(richness ?? "");
 
   return (
-    <div>
+    <div className="space-y-8 animate-fade-in">
       <PageHeader title="PR Outcomes" />
 
       {isLoading ? (
-        <div className="grid grid-cols-4 gap-3 mb-3">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
       ) : data?.stats ? (
-        <div className="grid grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
           <StatCard title="Total PRs" value={data.stats.total} />
-          <StatCard
-            title="Acceptance Rate"
-            value={`${data.stats.acceptanceRate}%`}
-          />
-          <StatCard
-            title="Revision Rate"
-            value={`${data.stats.revisionRate}%`}
-          />
-          <StatCard
-            title="Rejection Rate"
-            value={`${data.stats.rejectionRate}%`}
-          />
+          <StatCard title="Acceptance Rate" value={`${data.stats.acceptanceRate}%`} />
+          <StatCard title="Revision Rate" value={`${data.stats.revisionRate}%`} />
+          <StatCard title="Rejection Rate" value={`${data.stats.rejectionRate}%`} />
         </div>
       ) : null}
 
-      <div className="flex gap-2 mb-3">
-        <select
-          value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setFilter("status", e.target.value || null);
-          }}
-          className="border border-gray-200 px-2 py-1 text-small bg-white"
-        >
-          <option value="">All statuses</option>
-          {["OPENED", "MERGED", "CHANGES_REQUESTED", "CLOSED", "REVERTED"].map(
-            (s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ),
-          )}
-        </select>
-
-        <select
-          value={richnessFilter}
-          onChange={(e) => {
-            setRichnessFilter(e.target.value);
-            setFilter("richness", e.target.value || null);
-          }}
-          className="border border-gray-200 px-2 py-1 text-small bg-white"
-        >
-          <option value="">All richness</option>
-          {["FULL", "TAGGED", "HEURISTIC", "NONE"].map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {isLoading ? (
-        <Skeleton className="h-50" />
-      ) : (
-        <div className="border border-gray-200">
+      <ChartCard
+        title="Pull Requests"
+        action={
+          <div className="flex items-center gap-2">
+            <Select
+              value={statusFilter || "ALL"}
+              onValueChange={(v) => { setStatusFilter(v === "ALL" ? "" : v); setFilter("status", v === "ALL" ? null : v); }}
+              options={[
+                { value: "ALL", label: "All statuses" },
+                { value: "OPENED", label: "Opened" },
+                { value: "MERGED", label: "Merged" },
+                { value: "CHANGES_REQUESTED", label: "Changes Requested" },
+                { value: "CLOSED", label: "Closed" },
+                { value: "REVERTED", label: "Reverted" },
+              ]}
+            />
+            <Select
+              value={richnessFilter || "ALL"}
+              onValueChange={(v) => { setRichnessFilter(v === "ALL" ? "" : v); setFilter("richness", v === "ALL" ? null : v); }}
+              options={[
+                { value: "ALL", label: "All richness" },
+                { value: "FULL", label: "Full" },
+                { value: "TAGGED", label: "Tagged" },
+                { value: "HEURISTIC", label: "Heuristic" },
+                { value: "NONE", label: "None" },
+              ]}
+            />
+          </div>
+        }
+      >
+        {isLoading ? <Skeleton className="h-50" /> : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -152,35 +123,18 @@ export default function TeamOutcomesPage() {
                   <TableCell mono>{pr.repoFullName}</TableCell>
                   <TableCell>{pr.engineerName}</TableCell>
                   <TableCell mono>{pr.branchName}</TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANT[pr.status] ?? "default"}>
-                      {pr.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell mono>
-                    {pr.aiActivityCount > 0
-                      ? `${pr.aiActivityCount} sessions`
-                      : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <RichnessBadge richness={pr.dataRichness} />
-                  </TableCell>
+                  <TableCell><Badge variant={STATUS_VARIANT[pr.status] ?? "default"}>{pr.status}</Badge></TableCell>
+                  <TableCell mono>{pr.aiActivityCount > 0 ? `${pr.aiActivityCount} sessions` : "\u2014"}</TableCell>
+                  <TableCell><RichnessBadge richness={pr.dataRichness} /></TableCell>
                 </TableRow>
               ))}
               {data?.items.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    className="text-center text-gray-500 py-4"
-                    mono={false}
-                  >
-                    No PR outcomes found.
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell className="text-center text-text-tertiary py-8">No PR outcomes found.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
-        </div>
-      )}
+        )}
+      </ChartCard>
     </div>
   );
 }

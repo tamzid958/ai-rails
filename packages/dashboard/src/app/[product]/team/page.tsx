@@ -49,7 +49,7 @@ export default function TeamOverviewPage() {
 
       {overviewLoading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
       ) : overview ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
@@ -100,14 +100,14 @@ export default function TeamOverviewPage() {
               {(["FULL", "TAGGED", "HEURISTIC", "NONE"] as const).map((level) => (
                 <div key={level} className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COVERAGE_COLORS[level] }} />
-                  <span className="text-xs text-gray-500">{level}</span>
-                  <span className="text-xs tabular-nums text-gray-400">{coverage[level]}</span>
+                  <span className="text-xs text-text-tertiary">{level}</span>
+                  <span className="text-xs tabular-nums text-text-muted">{coverage[level]}</span>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <p className="text-sm text-gray-400 text-center py-8">No coverage data.</p>
+          <p className="text-sm text-text-tertiary text-center py-8">No coverage data.</p>
         )}
       </ChartCard>
     </div>

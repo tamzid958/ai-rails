@@ -25,7 +25,7 @@ function Select({ label, error, options, value, onValueChange, placeholder = "Se
       <SelectPrimitive.Root value={value} onValueChange={onValueChange}>
         <SelectPrimitive.Trigger
           className={clsx(
-            "inline-flex items-center justify-between h-10 px-3 text-sm bg-surface text-text-primary rounded-md",
+            "inline-flex items-center gap-2 h-8 px-2.5 text-xs bg-surface text-text-secondary rounded-md",
             "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             error
               ? "border-2 border-danger"
@@ -34,7 +34,7 @@ function Select({ label, error, options, value, onValueChange, placeholder = "Se
           aria-invalid={error ? true : undefined}
         >
           <SelectPrimitive.Value placeholder={placeholder} />
-          <SelectPrimitive.Icon><ChevronDown size={14} className="text-text-tertiary" /></SelectPrimitive.Icon>
+          <SelectPrimitive.Icon><ChevronDown size={12} strokeWidth={1.5} className="text-text-muted" /></SelectPrimitive.Icon>
         </SelectPrimitive.Trigger>
 
         <SelectPrimitive.Portal>

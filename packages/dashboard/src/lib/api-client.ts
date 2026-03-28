@@ -97,6 +97,8 @@ export type PromptRow = {
   taskType: string;
   isBase: boolean;
   engineerId: string | null;
+  parentId: string | null;
+  parentContent: string | null;
   content: string;
   usageCount: number;
   acceptRate: number | null;
@@ -304,6 +306,7 @@ export type ProviderModel = {
 export type WebhookRepoStatus = {
   id: string;
   fullName: string;
+  provider: string;
   webhookStatus: "CONNECTED" | "STALE" | "PENDING";
   lastEventAt: string | null;
 };
@@ -475,6 +478,20 @@ export const api = {
     );
   },
 
+  createOverride(productId: string, baseTemplateId: string, content: string) {
+    return postJson<{ id: string; taskType: string }>(
+      `/api/engineer/prompts`,
+      { productId, baseTemplateId, content },
+    );
+  },
+
+  updateOverride(templateId: string, content: string) {
+    return postJson<{ success: boolean }>(
+      `/api/engineer/prompts/update`,
+      { templateId, content },
+    );
+  },
+
   getEffectiveness(productId: string, engineerId: string) {
     return fetchJson<EffectivenessData>(
       `/api/engineer/effectiveness?productId=${productId}&engineerId=${engineerId}`,
@@ -532,6 +549,13 @@ export const api = {
   getTeamPrompts(productId: string) {
     return fetchJson<TeamPromptRow[]>(
       `/api/team/prompts?productId=${productId}`,
+    );
+  },
+
+  createBaseTemplate(productId: string, taskType: string, name: string, content: string) {
+    return postJson<{ id: string; taskType: string }>(
+      `/api/team/prompts`,
+      { productId, taskType, name, content },
     );
   },
 
@@ -682,7 +706,8 @@ export const api = {
 
   getWebhookStatus(productId: string) {
     return fetchJson<{
-      webhookUrl: string;
+      webhookUrl: { github: string; gitlab: string };
+      webhookSecret: string | null;
       repos: WebhookRepoStatus[];
     }>(`/api/settings/webhooks?productId=${productId}`);
   },
@@ -713,17 +738,17 @@ export const api = {
 
   // ── Recommendation endpoints ──
 
-  getRecommendations(productId: string, engineerId?: string) {
-    const qs = new URLSearchParams({ productId });
+  getRecommendations(productId: string, engineerId?: string, limit = 5, offset = 0) {
+    const qs = new URLSearchParams({ productId, limit: String(limit), offset: String(offset) });
     if (engineerId) qs.set("engineerId", engineerId);
-    return fetchJson<RecommendationRow[]>(
+    return fetchJson<{ items: RecommendationRow[]; total: number; limit: number; offset: number }>(
       `/api/recommendations?${qs.toString()}`,
     );
   },
 
-  getTeamRecommendations(productId: string) {
-    return fetchJson<RecommendationRow[]>(
-      `/api/recommendations/team?productId=${productId}`,
+  getTeamRecommendations(productId: string, limit = 5, offset = 0) {
+    return fetchJson<{ items: RecommendationRow[]; total: number; limit: number; offset: number }>(
+      `/api/recommendations/team?productId=${productId}&limit=${limit}&offset=${offset}`,
     );
   },
 

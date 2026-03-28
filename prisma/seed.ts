@@ -347,6 +347,7 @@ async function main() {
       defaultModel: "gpt-4o",
       costAlertDaily: 150.0,
       costAlertEngineer: 25.0,
+      webhookSecret: crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, ""),
     },
   });
   console.log(`  ✓ Product: ${product.name}`);

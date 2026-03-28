@@ -37,7 +37,7 @@ const DialogContent = forwardRef<
         ref={ref}
         className={clsx(
           "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
-          "w-full p-0 bg-surface border border-border-subtle rounded-xl shadow-xl",
+          "w-[calc(100%-2rem)] p-0 bg-surface border border-border-subtle rounded-xl shadow-xl",
           "data-[state=open]:animate-scale-in",
           sizes[size],
           className,

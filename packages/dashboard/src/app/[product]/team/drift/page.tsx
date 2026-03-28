@@ -7,6 +7,7 @@ import { api } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartCard } from "@/components/ui/chart-card";
 import {
   Table,
   TableHeader,
@@ -32,13 +33,13 @@ export default function ConfigDriftPage() {
   });
 
   return (
-    <div>
+    <div className="space-y-8 animate-fade-in">
       <PageHeader title="Config Drift" />
 
       {isLoading ? (
-        <Skeleton className="h-50" />
+        <Skeleton className="h-48" />
       ) : (
-        <div className="border border-gray-200">
+        <ChartCard title="Drift Overview">
           <Table>
             <TableHeader>
               <TableRow>
@@ -78,7 +79,7 @@ export default function ConfigDriftPage() {
               {drift?.length === 0 && (
                 <TableRow>
                   <TableCell
-                    className="text-center text-gray-500 py-4"
+                    className="text-center text-text-tertiary py-8"
                     mono={false}
                   >
                     No drift data available.
@@ -87,7 +88,7 @@ export default function ConfigDriftPage() {
               )}
             </TableBody>
           </Table>
-        </div>
+        </ChartCard>
       )}
     </div>
   );

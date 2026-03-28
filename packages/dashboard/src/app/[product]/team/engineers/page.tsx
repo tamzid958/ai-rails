@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RichnessBadge } from "@/components/data-richness/richness-badge";
 import { PeriodSelector } from "@/components/engineer/period-selector";
+import { ChartCard } from "@/components/ui/chart-card";
 import {
   Table,
   TableHeader,
@@ -66,16 +67,16 @@ export default function TeamEngineersPage() {
   }
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-3">
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader title="Engineer Comparison" />
         <PeriodSelector value={period} onChange={setPeriod} />
       </div>
 
       {isLoading ? (
-        <Skeleton className="h-50" />
+        <Skeleton className="h-48" />
       ) : (
-        <div className="border border-gray-200">
+        <ChartCard title="Team Members">
           <Table>
             <TableHeader>
               <TableRow>
@@ -137,14 +138,14 @@ export default function TeamEngineersPage() {
               ))}
               {sorted.length === 0 && (
                 <TableRow>
-                  <TableCell className="text-center text-gray-500 py-4" mono={false}>
+                  <TableCell className="text-center text-text-tertiary py-8" mono={false}>
                     No team members found.
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-        </div>
+        </ChartCard>
       )}
     </div>
   );

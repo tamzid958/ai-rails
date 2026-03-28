@@ -14,6 +14,7 @@ import { promptsCommand } from "./commands/prompts.js";
 import { commitCommand } from "./commands/commit.js";
 import { tagCommand } from "./commands/tag.js";
 import { statusCommand } from "./commands/status.js";
+import { configCommand } from "./commands/config.js";
 
 const VERSION = "0.1.0";
 const noColor = !!process.env["NO_COLOR"];
@@ -41,6 +42,7 @@ program.addCommand(promptsCommand);
 program.addCommand(commitCommand);
 program.addCommand(tagCommand);
 program.addCommand(statusCommand);
+program.addCommand(configCommand);
 
 // Top-level error handler
 program.exitOverride();

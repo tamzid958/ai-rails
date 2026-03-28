@@ -11,21 +11,18 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartCard } from "@/components/ui/chart-card";
 import { ForbiddenPage } from "@/components/ui/forbidden-page";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Plus } from "lucide-react";
 
 export default function SettingsReposPage() {
   const { product, isMember } = useProduct();
   const queryClient = useQueryClient();
 
+  const [addOpen, setAddOpen] = useState(false);
   const [fullName, setFullName] = useState("");
   const [provider, setProvider] = useState("github");
   const [nameError, setNameError] = useState("");
@@ -45,11 +42,10 @@ export default function SettingsReposPage() {
       setProvider("github");
       setNameError("");
       setAddError("");
+      setAddOpen(false);
       queryClient.invalidateQueries({ queryKey: ["settings-repos"] });
     },
-    onError: (err: Error) => {
-      setAddError(err.message);
-    },
+    onError: (err: Error) => setAddError(err.message),
   });
 
   const removeMutation = useMutation({
@@ -60,61 +56,32 @@ export default function SettingsReposPage() {
     },
   });
 
-  if (isMember) {
-    return <ForbiddenPage message="Repository management requires LEAD or OWNER role." />;
-  }
+  if (isMember) return <ForbiddenPage message="Repository management requires LEAD or OWNER role." />;
 
   function handleAdd() {
-    if (!fullName.trim()) {
-      setNameError("Repository name is required");
-      return;
-    }
-    if (!fullName.includes("/")) {
-      setNameError("Must be in org/repo format");
-      return;
-    }
+    if (!fullName.trim()) { setNameError("Repository name is required"); return; }
+    if (!fullName.includes("/")) { setNameError("Must be in org/repo format"); return; }
     setNameError("");
     setAddError("");
     addMutation.mutate();
   }
 
   return (
-    <div>
-      <PageHeader title="Repositories" />
-
-      <div className="mb-4">
-        <div className="flex items-end gap-2">
-          <Input
-            label="Repository"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            error={nameError}
-            placeholder="org/repo-name"
-            className="w-60"
-          />
-          <Select
-            label="Provider"
-            value={provider}
-            onValueChange={(value) => setProvider(value)}
-            options={[
-              { value: "github", label: "GitHub" },
-              { value: "gitlab", label: "GitLab" },
-            ]}
-            className="w-36"
-          />
-          <Button onClick={handleAdd} loading={addMutation.isPending}>
-            Add Repository
+    <div className="space-y-8 animate-fade-in">
+      <PageHeader
+        title="Repositories"
+        actions={
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Plus size={14} strokeWidth={1.5} /> Add Repository
           </Button>
-        </div>
-        {addError && (
-          <p className="text-small text-danger mt-1">{addError}</p>
-        )}
-      </div>
+        }
+      />
 
-      {isLoading ? (
-        <Skeleton className="h-50" />
-      ) : (
-        <div className="border border-gray-200">
+      <ChartCard
+        title="Linked Repositories"
+        action={repos?.length ? <span className="text-xs text-text-muted tabular-nums">{repos.length} total</span> : undefined}
+      >
+        {isLoading ? <Skeleton className="h-48" /> : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -132,47 +99,43 @@ export default function SettingsReposPage() {
                   <TableCell mono>{repo.fullName}</TableCell>
                   <TableCell>{repo.provider}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={repo.webhookActive ? "success" : "default"}
-                    >
+                    <Badge variant={repo.webhookActive ? "success" : "default"}>
                       {repo.webhookActive ? "ACTIVE" : "PENDING"}
                     </Badge>
                   </TableCell>
+                  <TableCell>{repo.lastEventAt ? formatDistanceToNow(new Date(repo.lastEventAt), { addSuffix: true }) : "\u2014"}</TableCell>
+                  <TableCell>{format(new Date(repo.createdAt), "MMM d, yyyy")}</TableCell>
                   <TableCell>
-                    {repo.lastEventAt
-                      ? formatDistanceToNow(new Date(repo.lastEventAt), {
-                          addSuffix: true,
-                        })
-                      : "—"}
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(repo.createdAt), "MMM d, yyyy")}
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="danger"
-                      onClick={() => setRemoveId(repo.id)}
-                    >
-                      Remove
-                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setRemoveId(repo.id)} className="text-danger">Remove</Button>
                   </TableCell>
                 </TableRow>
               ))}
               {repos?.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    className="text-center text-gray-500 py-4"
-                    mono={false}
-                  >
-                    No repositories linked. Add one above.
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell className="text-center text-text-tertiary py-8">No repositories linked yet.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
-        </div>
-      )}
+        )}
+      </ChartCard>
+
+      {/* Add Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Add Repository</DialogTitle>
+            <DialogDescription>Link a repository to track AI activity.</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <Input label="Repository" value={fullName} onChange={(e) => setFullName(e.target.value)} error={nameError} placeholder="org/repo-name" />
+            <Select label="Provider" value={provider} onValueChange={setProvider} options={[{ value: "github", label: "GitHub" }, { value: "gitlab", label: "GitLab" }]} />
+            {addError && <p className="text-xs text-danger">{addError}</p>}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" size="sm" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleAdd} loading={addMutation.isPending}>Add Repository</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={removeId !== null}

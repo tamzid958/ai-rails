@@ -57,5 +57,15 @@ export async function GET(request: NextRequest) {
 
   rows.sort((a, b) => b.cost - a.cost);
 
+  const limit = parseInt(searchParams.get("limit") ?? "10", 10);
+  if (rows.length > limit) {
+    const top = rows.slice(0, limit);
+    const rest = rows.slice(limit);
+    const otherCost = Math.round(rest.reduce((sum, r) => sum + r.cost, 0) * 100) / 100;
+    const otherExceeded = rest.some((r) => r.exceeded);
+    top.push({ name: `Other (${rest.length})`, cost: otherCost, exceeded: otherExceeded });
+    return NextResponse.json(top);
+  }
+
   return NextResponse.json(rows);
 }

@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { FastifyRequest, FastifyReply } from "fastify";
+import { prisma } from "@airails/shared";
 import { handleGitHubEvent } from "../router.js";
 
 export function verifyGitHubSignature(
@@ -14,20 +15,36 @@ export function verifyGitHubSignature(
   return timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }
 
+async function resolveSecret(repoFullName: string): Promise<string | null> {
+  const repo = await prisma.repo.findUnique({
+    where: { fullName: repoFullName },
+    include: { product: { select: { webhookSecret: true } } },
+  });
+
+  return repo?.product?.webhookSecret ?? null;
+}
+
 export async function githubHandler(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  const secret = process.env["AIRAILS_WEBHOOK_SECRET"];
-  if (!secret) {
-    request.log.error("AIRAILS_WEBHOOK_SECRET not configured");
-    reply.status(500).send({ error: "Webhook secret not configured" });
-    return;
-  }
-
   const signature = request.headers["x-hub-signature-256"];
   if (typeof signature !== "string") {
     reply.status(401).send({ error: "Missing signature" });
+    return;
+  }
+
+  const body = request.body as { repository?: { full_name?: string } };
+  const repoFullName = body?.repository?.full_name;
+  if (!repoFullName) {
+    reply.status(400).send({ error: "Missing repository" });
+    return;
+  }
+
+  const secret = await resolveSecret(repoFullName);
+  if (!secret) {
+    request.log.error(`No webhook secret configured for repo: ${repoFullName}`);
+    reply.status(401).send({ error: "No webhook secret configured for this product" });
     return;
   }
 
@@ -44,6 +61,5 @@ export async function githubHandler(
   }
 
   await handleGitHubEvent(event, request.body, request.log);
-
   reply.status(200).send({ received: true });
 }

@@ -6,9 +6,19 @@ import { useProduct } from "@/lib/product-context";
 import { api, type ProductSettings } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ForbiddenPage } from "@/components/ui/forbidden-page";
+import { Check, X } from "lucide-react";
+
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-sm text-text-secondary mb-2">{label}</label>
+      {children}
+      {hint && <p className="text-xs text-text-muted mt-2">{hint}</p>}
+    </div>
+  );
+}
 
 function ProductForm({ initial }: { initial: ProductSettings }) {
   const { product } = useProduct();
@@ -16,119 +26,143 @@ function ProductForm({ initial }: { initial: ProductSettings }) {
 
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description ?? "");
-  const [allowedModels, setAllowedModels] = useState(
-    initial.allowedModels.join(", "),
-  );
+  const [allowedModels, setAllowedModels] = useState<string[]>(initial.allowedModels);
   const [defaultModel, setDefaultModel] = useState(initial.defaultModel ?? "");
-  const [costAlertDaily, setCostAlertDaily] = useState(
-    initial.costAlertDaily != null ? String(initial.costAlertDaily) : "",
-  );
-  const [costAlertEngineer, setCostAlertEngineer] = useState(
-    initial.costAlertEngineer != null
-      ? String(initial.costAlertEngineer)
-      : "",
-  );
+
+  const { data: providers } = useQuery({
+    queryKey: ["settings-providers", product.id],
+    queryFn: () => api.getProviders(product.id),
+  });
+  const availableModels = providers?.map((p: { model: string }) => p.model) ?? [];
+  const [costAlertDaily, setCostAlertDaily] = useState(initial.costAlertDaily != null ? String(initial.costAlertDaily) : "");
+  const [costAlertEngineer, setCostAlertEngineer] = useState(initial.costAlertEngineer != null ? String(initial.costAlertEngineer) : "");
   const [saved, setSaved] = useState(false);
+
+  const inputClass = "w-full h-10 px-3 text-sm bg-surface text-text-primary border border-border-muted rounded-md outline-none placeholder:text-text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 transition-all";
 
   const updateMutation = useMutation({
     mutationFn: () => {
-      const models = allowedModels
-        .split(",")
-        .map((m) => m.trim())
-        .filter(Boolean);
-
       return api.updateProduct(product.id, {
         name,
         description: description || null,
-        allowedModels: models,
+        allowedModels: allowedModels,
         defaultModel: defaultModel || null,
         costAlertDaily: costAlertDaily ? parseFloat(costAlertDaily) : null,
-        costAlertEngineer: costAlertEngineer
-          ? parseFloat(costAlertEngineer)
-          : null,
+        costAlertEngineer: costAlertEngineer ? parseFloat(costAlertEngineer) : null,
       });
     },
     onSuccess: () => {
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => setSaved(false), 3000);
       queryClient.invalidateQueries({ queryKey: ["settings-product"] });
     },
   });
 
   return (
-    <div className="max-w-lg flex flex-col gap-4">
-      <Input
-        label="Product Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
+    <div style={{ maxWidth: 560 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-label uppercase text-gray-500 tracking-[0.06em]">
-          Slug
-        </label>
-        <input
-          value={initial.slug}
-          disabled
-          className="w-full p-2 text-body bg-gray-50 text-gray-500 border border-gray-200 cursor-not-allowed"
-        />
-        <p className="text-small text-gray-400">
-          Slug cannot be changed after creation.
-        </p>
-      </div>
+        {/* General */}
+        <div>
+          <h3 style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 24 }}>General</h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <Field label="Product Name">
+              <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+            </Field>
+            <Field label="Slug" hint="Cannot be changed after creation">
+              <div style={{ height: 40, padding: "0 12px", display: "flex", alignItems: "center", fontSize: 14, color: "var(--color-text-muted)", background: "var(--color-surface)", border: "1px solid var(--color-border-subtle)", borderRadius: 6, fontFamily: "var(--font-mono)" }}>
+                {initial.slug}
+              </div>
+            </Field>
+            <Field label="Description">
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                placeholder="What does this product track?"
+                style={{ width: "100%", padding: "10px 12px", fontSize: 14, color: "var(--color-text-primary)", background: "var(--color-surface)", border: "1px solid var(--color-border-muted)", borderRadius: 6, outline: "none", resize: "vertical", fontFamily: "inherit" }}
+              />
+            </Field>
+          </div>
+        </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-label uppercase text-gray-500 tracking-[0.06em]">
-          Description
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          className="w-full p-2 text-body bg-white text-black border border-gray-200 outline-none focus:border-2 focus:border-accent"
-        />
-      </div>
+        {/* Divider */}
+        <div style={{ height: 1, background: "var(--color-border-subtle)" }} />
 
-      <Input
-        label="Allowed Models"
-        value={allowedModels}
-        onChange={(e) => setAllowedModels(e.target.value)}
-        placeholder="gpt-4o, claude-sonnet (empty = all)"
-      />
+        {/* Models */}
+        <div>
+          <h3 style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 }}>AI Models</h3>
+          <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 24 }}>Control which models engineers can use</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            <Field label="Allowed Models" hint="Select models engineers can use. Leave empty to allow all.">
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: allowedModels.length > 0 ? 10 : 0 }}>
+                {allowedModels.map((m) => (
+                  <span key={m} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", fontSize: 12, background: "var(--color-surface)", border: "1px solid var(--color-border-muted)", borderRadius: 4, color: "var(--color-text-secondary)" }}>
+                    {m}
+                    <button onClick={() => setAllowedModels((prev) => prev.filter((x) => x !== m))} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, display: "flex", color: "var(--color-text-muted)" }}>
+                      <X size={10} strokeWidth={2} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {availableModels.filter((m) => !allowedModels.includes(m)).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setAllowedModels((prev) => [...prev, m])}
+                    style={{ padding: "3px 10px", fontSize: 12, background: "none", border: "1px dashed var(--color-border-subtle)", borderRadius: 4, color: "var(--color-text-muted)", cursor: "pointer" }}
+                  >
+                    + {m}
+                  </button>
+                ))}
+              </div>
+            </Field>
+            <Field label="Default Model">
+              <select
+                value={defaultModel}
+                onChange={(e) => setDefaultModel(e.target.value)}
+                style={{ width: "100%", height: 40, padding: "0 12px", fontSize: 14, background: "var(--color-surface)", color: "var(--color-text-primary)", border: "1px solid var(--color-border-muted)", borderRadius: 6, outline: "none", cursor: "pointer" }}
+              >
+                <option value="">None (use provider default)</option>
+                {(allowedModels.length > 0 ? allowedModels : availableModels).map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </div>
 
-      <Input
-        label="Default Model"
-        value={defaultModel}
-        onChange={(e) => setDefaultModel(e.target.value)}
-        placeholder="gpt-4o"
-      />
+        {/* Divider */}
+        <div style={{ height: 1, background: "var(--color-border-subtle)" }} />
 
-      <Input
-        label="Cost Alert — Daily Threshold (USD)"
-        type="number"
-        value={costAlertDaily}
-        onChange={(e) => setCostAlertDaily(e.target.value)}
-        placeholder="50.00"
-      />
+        {/* Cost Alerts */}
+        <div>
+          <h3 style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 4 }}>Cost Alerts</h3>
+          <p style={{ fontSize: 12, color: "var(--color-text-muted)", marginBottom: 24 }}>Get notified when spending exceeds thresholds</p>
+          <div style={{ display: "flex", gap: 16 }}>
+            <Field label="Daily Threshold (USD)">
+              <input type="number" value={costAlertDaily} onChange={(e) => setCostAlertDaily(e.target.value)} placeholder="50.00" className={inputClass} />
+            </Field>
+            <Field label="Per Engineer / Day (USD)">
+              <input type="number" value={costAlertEngineer} onChange={(e) => setCostAlertEngineer(e.target.value)} placeholder="10.00" className={inputClass} />
+            </Field>
+          </div>
+        </div>
 
-      <Input
-        label="Cost Alert — Per Engineer Daily (USD)"
-        type="number"
-        value={costAlertEngineer}
-        onChange={(e) => setCostAlertEngineer(e.target.value)}
-        placeholder="10.00"
-      />
+        {/* Divider */}
+        <div style={{ height: 1, background: "var(--color-border-subtle)" }} />
 
-      <div className="flex items-center justify-end gap-2">
-        {saved && (
-          <span className="text-small text-success">Changes saved</span>
-        )}
-        <Button
-          onClick={() => updateMutation.mutate()}
-          loading={updateMutation.isPending}
-        >
-          Save Changes
-        </Button>
+        {/* Save */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 12 }}>
+          {saved && (
+            <span className="flex items-center gap-1.5 text-xs text-success">
+              <Check size={12} strokeWidth={2} /> Saved
+            </span>
+          )}
+          <Button onClick={() => updateMutation.mutate()} loading={updateMutation.isPending}>
+            Save Changes
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -143,21 +177,19 @@ export default function ProductSettingsPage() {
     enabled: isOwner,
   });
 
-  if (!isOwner) {
-    return <ForbiddenPage message="Product settings require OWNER role." />;
-  }
+  if (!isOwner) return <ForbiddenPage message="Product settings require OWNER role." />;
 
   if (isLoading || !settings) {
     return (
-      <div>
+      <div className="space-y-8 animate-fade-in">
         <PageHeader title="Product Settings" />
-        <Skeleton className="h-75" />
+        <Skeleton className="h-96" />
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-8 animate-fade-in">
       <PageHeader title="Product Settings" />
       <ProductForm initial={settings} />
     </div>

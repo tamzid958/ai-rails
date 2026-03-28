@@ -11,32 +11,28 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartCard } from "@/components/ui/chart-card";
 import { ForbiddenPage } from "@/components/ui/forbidden-page";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Plus, MoreHorizontal, Shield, Trash2 } from "lucide-react";
 
-const ROLE_VARIANT = {
-  OWNER: "info",
-  LEAD: "success",
-  MEMBER: "default",
-} as const;
+const ROLE_VARIANT = { OWNER: "info", LEAD: "success", MEMBER: "default" } as const;
 
 export default function MembersPage() {
   const { product, isOwner, isMember } = useProduct();
   const queryClient = useQueryClient();
 
+  const [addOpen, setAddOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("MEMBER");
   const [emailError, setEmailError] = useState("");
   const [addError, setAddError] = useState("");
   const [removeId, setRemoveId] = useState<string | null>(null);
+  const [roleChangeTarget, setRoleChangeTarget] = useState<{ membershipId: string; name: string; currentRole: string } | null>(null);
+  const [selectedNewRole, setSelectedNewRole] = useState("");
 
   const { data: members, isLoading } = useQuery({
     queryKey: ["settings-members", product.id],
@@ -46,98 +42,48 @@ export default function MembersPage() {
 
   const addMutation = useMutation({
     mutationFn: () => api.addMember(product.id, email.trim(), role),
-    onSuccess: () => {
-      setEmail("");
-      setRole("MEMBER");
-      setEmailError("");
-      setAddError("");
-      queryClient.invalidateQueries({ queryKey: ["settings-members"] });
-    },
-    onError: (err: Error) => {
-      setAddError(err.message);
-    },
+    onSuccess: () => { setEmail(""); setRole("MEMBER"); setEmailError(""); setAddError(""); setAddOpen(false); queryClient.invalidateQueries({ queryKey: ["settings-members"] }); },
+    onError: (err: Error) => setAddError(err.message),
   });
 
   const roleMutation = useMutation({
-    mutationFn: ({ membershipId, newRole }: { membershipId: string; newRole: string }) =>
-      api.updateMemberRole(membershipId, newRole),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings-members"] });
-    },
+    mutationFn: ({ membershipId, newRole }: { membershipId: string; newRole: string }) => api.updateMemberRole(membershipId, newRole),
+    onSuccess: () => { setRoleChangeTarget(null); queryClient.invalidateQueries({ queryKey: ["settings-members"] }); },
   });
 
   const removeMutation = useMutation({
     mutationFn: (id: string) => api.removeMember(id),
-    onSuccess: () => {
-      setRemoveId(null);
-      queryClient.invalidateQueries({ queryKey: ["settings-members"] });
-    },
+    onSuccess: () => { setRemoveId(null); queryClient.invalidateQueries({ queryKey: ["settings-members"] }); },
   });
 
-  if (isMember) {
-    return <ForbiddenPage message="Member management requires LEAD or OWNER role." />;
-  }
+  if (isMember) return <ForbiddenPage message="Member management requires LEAD or OWNER role." />;
 
   function handleAdd() {
-    if (!email.trim()) {
-      setEmailError("Email is required");
-      return;
-    }
-    if (!email.includes("@")) {
-      setEmailError("Invalid email");
-      return;
-    }
-    setEmailError("");
-    setAddError("");
-    addMutation.mutate();
+    if (!email.trim()) { setEmailError("Email is required"); return; }
+    if (!email.includes("@")) { setEmailError("Invalid email"); return; }
+    setEmailError(""); setAddError(""); addMutation.mutate();
   }
 
   const roleOptions = isOwner
-    ? [
-        { value: "MEMBER", label: "MEMBER" },
-        { value: "LEAD", label: "LEAD" },
-        { value: "OWNER", label: "OWNER" },
-      ]
-    : [
-        { value: "MEMBER", label: "MEMBER" },
-        { value: "LEAD", label: "LEAD" },
-      ];
+    ? [{ value: "MEMBER", label: "Member" }, { value: "LEAD", label: "Lead" }, { value: "OWNER", label: "Owner" }]
+    : [{ value: "MEMBER", label: "Member" }, { value: "LEAD", label: "Lead" }];
 
   return (
-    <div>
-      <PageHeader title="Members" />
-
-      <div className="mb-4">
-        <div className="flex items-end gap-2">
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={emailError}
-            placeholder="engineer@company.com"
-            className="w-60"
-          />
-          <Select
-            label="Role"
-            value={role}
-            onValueChange={(value) => setRole(value)}
-            options={roleOptions}
-            className="w-36"
-          />
-          <Button onClick={handleAdd} loading={addMutation.isPending}>
-            Add Member
+    <div className="space-y-8 animate-fade-in">
+      <PageHeader
+        title="Members"
+        actions={
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Plus size={14} strokeWidth={1.5} /> Add Member
           </Button>
-        </div>
-        {addError && (
-          <p className="text-small text-danger mt-1">{addError}</p>
-        )}
-      </div>
+        }
+      />
 
-      {isLoading ? (
-        <Skeleton className="h-50" />
-      ) : (
-        <div className="border border-gray-200">
+      <ChartCard
+        title="Team Members"
+        action={members?.length ? <span className="text-xs text-text-muted tabular-nums">{members.length} total</span> : undefined}
+      >
+        {isLoading ? <Skeleton className="h-48" /> : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -146,7 +92,7 @@ export default function MembersPage() {
                 <TableHead>Git Username</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Joined</TableHead>
-                {isOwner && <TableHead>{""}</TableHead>}
+                {isOwner && <TableHead className="w-12">{""}</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -155,65 +101,95 @@ export default function MembersPage() {
                   <TableCell>{m.name}</TableCell>
                   <TableCell mono>{m.email}</TableCell>
                   <TableCell mono>
-                    {m.gitUsername ?? (
-                      <span className="text-warning text-small">
-                        No git username — commits won&apos;t be tracked
-                      </span>
-                    )}
+                    {m.gitUsername ?? <span className="text-warning text-xs">No git username</span>}
                   </TableCell>
                   <TableCell>
-                    {isOwner ? (
-                      <select
-                        value={m.role}
-                        onChange={(e) =>
-                          roleMutation.mutate({
-                            membershipId: m.id,
-                            newRole: e.target.value,
-                          })
-                        }
-                        className="border border-gray-200 px-2 py-1 text-small bg-white"
-                      >
-                        <option value="MEMBER">MEMBER</option>
-                        <option value="LEAD">LEAD</option>
-                        <option value="OWNER">OWNER</option>
-                      </select>
-                    ) : (
-                      <Badge variant={ROLE_VARIANT[m.role]}>
-                        {m.role}
-                      </Badge>
-                    )}
+                    <Badge variant={ROLE_VARIANT[m.role]}>{m.role}</Badge>
                   </TableCell>
-                  <TableCell>
-                    {format(new Date(m.createdAt), "MMM d, yyyy")}
-                  </TableCell>
+                  <TableCell>{format(new Date(m.createdAt), "MMM d, yyyy")}</TableCell>
                   {isOwner && (
                     <TableCell>
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => setRemoveId(m.id)}
-                      >
-                        Remove
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-surface-raised transition-colors cursor-pointer">
+                            <MoreHorizontal size={14} strokeWidth={1.5} />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => { setRoleChangeTarget({ membershipId: m.id, name: m.name, currentRole: m.role }); setSelectedNewRole(m.role); }}>
+                            <Shield size={14} strokeWidth={1.5} />
+                            Change Role
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => setRemoveId(m.id)} className="text-danger!">
+                            <Trash2 size={14} strokeWidth={1.5} />
+                            Remove
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   )}
                 </TableRow>
               ))}
               {members?.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    className="text-center text-gray-500 py-4"
-                    mono={false}
-                  >
-                    No members found.
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell className="text-center text-text-tertiary py-8">No members found.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
-        </div>
-      )}
+        )}
+      </ChartCard>
 
+      {/* Add Member Dialog */}
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Add Member</DialogTitle>
+            <DialogDescription>Invite an engineer to this product.</DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <Input label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} error={emailError} placeholder="engineer@company.com" />
+            <Select label="Role" value={role} onValueChange={setRole} options={roleOptions} />
+            {addError && <p className="text-xs text-danger">{addError}</p>}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" size="sm" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleAdd} loading={addMutation.isPending}>Add Member</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Dialog */}
+      <Dialog open={roleChangeTarget !== null} onOpenChange={(open) => { if (!open) setRoleChangeTarget(null); }}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Change Role</DialogTitle>
+            <DialogDescription>
+              {roleChangeTarget ? `Update ${roleChangeTarget.name}'s role. This will change their permissions immediately.` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody>
+            <Select
+              label="New Role"
+              value={selectedNewRole}
+              onValueChange={setSelectedNewRole}
+              options={roleOptions}
+            />
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" size="sm" onClick={() => setRoleChangeTarget(null)}>Cancel</Button>
+            <Button
+              size="sm"
+              disabled={!roleChangeTarget || selectedNewRole === roleChangeTarget.currentRole}
+              loading={roleMutation.isPending}
+              onClick={() => roleChangeTarget && roleMutation.mutate({ membershipId: roleChangeTarget.membershipId, newRole: selectedNewRole })}
+            >
+              Change Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove Confirmation */}
       <ConfirmDialog
         open={removeId !== null}
         title="Remove Member"

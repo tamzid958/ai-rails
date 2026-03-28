@@ -6,11 +6,10 @@ import { api } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartCard } from "@/components/ui/chart-card";
 import { SwissLineChart } from "@/components/charts/swiss-line-chart";
-import {
-  SwissGroupedBar,
-  SwissComparisonBar,
-} from "@/components/charts/swiss-bar-chart";
+import { SwissGroupedBar, SwissComparisonBar } from "@/components/charts/swiss-bar-chart";
+import { Target } from "lucide-react";
 
 export default function EffectivenessPage() {
   const { product, engineer } = useProduct();
@@ -42,129 +41,76 @@ export default function EffectivenessPage() {
     return (
       <div>
         <PageHeader title="Effectiveness" />
-        <div className="border border-gray-200 p-4 mt-3 text-center">
-          <h3 className="text-h3">
-            Not enough data yet for {product.name}.
-          </h3>
-          <p className="text-body text-gray-500 mt-1">
-            At least 5 AI-correlated PRs are needed to calculate effectiveness
-            scores.
+        <div className="bg-surface-raised border border-border-subtle rounded-lg p-8 text-center">
+          <Target size={28} strokeWidth={1} className="text-text-muted mx-auto mb-4" />
+          <h3 className="text-base font-medium text-text-primary">Not enough data yet</h3>
+          <p className="text-sm text-text-tertiary mt-1">
+            At least 5 AI-correlated PRs are needed to calculate effectiveness scores.
           </p>
-          <p className="text-h2 tabular-nums mt-2">
-            {effectiveness.totalPrs}/5 PRs correlated
+          <p className="text-3xl font-light tabular-nums text-text-primary mt-4">
+            {effectiveness.totalPrs}/5
           </p>
+          <p className="text-xs text-text-muted mt-1">PRs correlated</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-8 animate-fade-in">
       <PageHeader title="Effectiveness" />
 
-      {/* Stat Cards */}
       {effectivenessLoading ? (
-        <div className="grid grid-cols-3 gap-3 mt-3 mb-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
+        <div className="grid grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
       ) : effectiveness ? (
-        <div className="grid grid-cols-3 gap-3 mt-3 mb-3">
-          <StatCard
-            title="Acceptance Rate"
-            value={`${effectiveness.acceptanceRate.toFixed(1)}%`}
-          />
-          <StatCard
-            title="Revision Rate"
-            value={`${effectiveness.revisionRate.toFixed(1)}%`}
-          />
-          <StatCard
-            title="Rejection Rate"
-            value={`${effectiveness.rejectionRate.toFixed(1)}%`}
-          />
+        <div className="grid grid-cols-3 gap-4 stagger">
+          <StatCard title="Acceptance Rate" value={`${effectiveness.acceptanceRate.toFixed(1)}%`} />
+          <StatCard title="Revision Rate" value={`${effectiveness.revisionRate.toFixed(1)}%`} />
+          <StatCard title="Rejection Rate" value={`${effectiveness.rejectionRate.toFixed(1)}%`} />
         </div>
       ) : null}
 
-      {/* Acceptance Trend */}
-      <div className="border border-gray-200 p-3 mb-3">
-        <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
-          Acceptance Trend
-        </h3>
-        {trendLoading ? (
-          <Skeleton className="h-75" />
-        ) : trend?.length ? (
-          <SwissLineChart
-            data={trend}
-            xKey="week"
-            series={[{ dataKey: "rate", label: "Acceptance %" }]}
-            tooltipFormatter={(value) => `${value.toFixed(1)}%`}
-          />
+      <ChartCard title="Acceptance Trend">
+        {trendLoading ? <Skeleton className="h-75" /> : trend?.length ? (
+          <SwissLineChart data={trend} xKey="week" series={[{ dataKey: "rate", label: "Acceptance %" }]} tooltipFormatter={(value) => `${value.toFixed(1)}%`} />
         ) : (
-          <p className="text-small text-gray-500 py-8 text-center">
-            No trend data yet.
-          </p>
+          <p className="text-sm text-text-tertiary py-12 text-center">No trend data yet.</p>
         )}
-      </div>
+      </ChartCard>
 
-      {/* Tool Effectiveness + Team Comparison */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="border border-gray-200 p-3">
-          <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
-            By Tool
-          </h3>
-          {toolsLoading ? (
-            <Skeleton className="h-50" />
-          ) : toolEffectiveness?.length ? (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ChartCard title="By Tool" className="h-full">
+          {toolsLoading ? <Skeleton className="h-50" /> : toolEffectiveness?.length ? (
             <SwissGroupedBar
               items={toolEffectiveness.map((t) => ({
                 label: t.tool,
                 segments: [
-                  { label: "Accepted", value: t.accepted, color: "#1A8C3A" },
-                  { label: "Revised", value: t.revised, color: "#C67600" },
-                  { label: "Rejected", value: t.rejected, color: "#CC1B1B" },
+                  { label: "Accepted", value: t.accepted, color: "var(--color-success)" },
+                  { label: "Revised", value: t.revised, color: "var(--color-warning)" },
+                  { label: "Rejected", value: t.rejected, color: "var(--color-danger)" },
                 ],
               }))}
             />
           ) : (
-            <p className="text-small text-gray-500 py-8 text-center">
-              No tool data.
-            </p>
+            <p className="text-sm text-text-tertiary py-12 text-center">No tool data.</p>
           )}
-        </div>
+        </ChartCard>
 
-        <div className="border border-gray-200 p-3">
-          <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
-            You vs Team Average
-          </h3>
-          {comparisonLoading ? (
-            <Skeleton className="h-50" />
-          ) : comparison ? (
+        <ChartCard title="You vs Team Average" className="h-full">
+          {comparisonLoading ? <Skeleton className="h-50" /> : comparison ? (
             <SwissComparisonBar
               items={[
-                {
-                  label: "Acceptance",
-                  myValue: comparison.myAcceptance,
-                  teamValue: comparison.teamAcceptance,
-                },
-                {
-                  label: "Revision",
-                  myValue: comparison.myRevision,
-                  teamValue: comparison.teamRevision,
-                },
-                {
-                  label: "Rejection",
-                  myValue: comparison.myRejection,
-                  teamValue: comparison.teamRejection,
-                },
+                { label: "Acceptance", myValue: comparison.myAcceptance, teamValue: comparison.teamAcceptance },
+                { label: "Revision", myValue: comparison.myRevision, teamValue: comparison.teamRevision },
+                { label: "Rejection", myValue: comparison.myRejection, teamValue: comparison.teamRejection },
               ]}
             />
           ) : (
-            <p className="text-small text-gray-500 py-8 text-center">
-              No comparison data.
-            </p>
+            <p className="text-sm text-text-tertiary py-12 text-center">No comparison data.</p>
           )}
-        </div>
+        </ChartCard>
       </div>
     </div>
   );

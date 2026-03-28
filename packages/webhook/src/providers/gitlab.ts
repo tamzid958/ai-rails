@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import type { FastifyRequest, FastifyReply } from "fastify";
+import { prisma } from "@airails/shared";
 import { handleGitLabEvent } from "../router.js";
 
 export function verifyGitLabToken(
@@ -10,20 +11,36 @@ export function verifyGitLabToken(
   return timingSafeEqual(Buffer.from(receivedToken), Buffer.from(secret));
 }
 
+async function resolveSecret(repoFullName: string): Promise<string | null> {
+  const repo = await prisma.repo.findUnique({
+    where: { fullName: repoFullName },
+    include: { product: { select: { webhookSecret: true } } },
+  });
+
+  return repo?.product?.webhookSecret ?? null;
+}
+
 export async function gitlabHandler(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  const secret = process.env["AIRAILS_WEBHOOK_SECRET"];
-  if (!secret) {
-    request.log.error("AIRAILS_WEBHOOK_SECRET not configured");
-    reply.status(500).send({ error: "Webhook secret not configured" });
-    return;
-  }
-
   const token = request.headers["x-gitlab-token"];
   if (typeof token !== "string") {
     reply.status(401).send({ error: "Missing token" });
+    return;
+  }
+
+  const body = request.body as { project?: { path_with_namespace?: string }; object_kind?: string };
+  const repoFullName = body?.project?.path_with_namespace;
+  if (!repoFullName) {
+    reply.status(400).send({ error: "Missing project" });
+    return;
+  }
+
+  const secret = await resolveSecret(repoFullName);
+  if (!secret) {
+    request.log.error(`No webhook secret configured for repo: ${repoFullName}`);
+    reply.status(401).send({ error: "No webhook secret configured for this product" });
     return;
   }
 
@@ -32,7 +49,6 @@ export async function gitlabHandler(
     return;
   }
 
-  const body = request.body as { object_kind?: string };
   const eventType = body.object_kind;
   if (typeof eventType !== "string") {
     reply.status(400).send({ error: "Missing object_kind" });
@@ -40,6 +56,5 @@ export async function gitlabHandler(
   }
 
   await handleGitLabEvent(eventType, request.body, request.log);
-
   reply.status(200).send({ received: true });
 }

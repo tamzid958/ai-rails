@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { prisma, ProductCreateSchema, ProductUpdateSchema, Forbidden, NotFound, slugify } from "@airails/shared";
 import { requireRole } from "../auth/role-guard.js";
@@ -34,6 +35,7 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
         defaultModel: data.defaultModel,
         costAlertDaily: data.costAlertDaily,
         costAlertEngineer: data.costAlertEngineer,
+        webhookSecret: randomBytes(32).toString("hex"),
       },
     });
 

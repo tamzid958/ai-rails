@@ -31,16 +31,22 @@ export async function GET(request: NextRequest) {
     where.engineerId = null;
   }
 
-  const recommendations = await prisma.recommendation.findMany({
-    where,
-    include: {
-      engineer: { select: { name: true } },
-    },
-    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
-  });
+  const limit = parseInt(searchParams.get("limit") ?? "5", 10);
+  const offset = parseInt(searchParams.get("offset") ?? "0", 10);
 
-  return NextResponse.json(
-    recommendations.map((r) => ({
+  const [recommendations, total] = await Promise.all([
+    prisma.recommendation.findMany({
+      where,
+      include: { engineer: { select: { name: true } } },
+      orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+      take: limit,
+      skip: offset,
+    }),
+    prisma.recommendation.count({ where }),
+  ]);
+
+  return NextResponse.json({
+    items: recommendations.map((r) => ({
       id: r.id,
       type: r.type,
       title: r.title,
@@ -52,5 +58,8 @@ export async function GET(request: NextRequest) {
       dismissedAt: r.dismissedAt?.toISOString() ?? null,
       createdAt: r.createdAt.toISOString(),
     })),
-  );
+    total,
+    limit,
+    offset,
+  });
 }
