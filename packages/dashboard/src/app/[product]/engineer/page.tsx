@@ -66,9 +66,9 @@ export default function EngineerOverviewPage() {
   const totalActivities = activitiesData?.pages[0]?.total ?? 0;
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-3">
-        <PageHeader title="Overview" />
+    <div className="animate-fade-in">
+      <div className="flex items-end justify-between mb-6">
+        <PageHeader title="Overview" className="mb-0 pb-0" />
         <PeriodSelector value={period} onChange={setPeriod} />
       </div>
 
@@ -76,13 +76,13 @@ export default function EngineerOverviewPage() {
 
       {/* Stat Cards */}
       {statsLoading ? (
-        <div className="grid grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-30" />
           ))}
         </div>
       ) : stats ? (
-        <div className="grid grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger">
           <StatCard
             title="AI-Assisted PRs"
             value={stats.aiAssistedPrs}
@@ -107,14 +107,14 @@ export default function EngineerOverviewPage() {
       ) : null}
 
       {/* Suggestions */}
-      <div className="mb-3">
+      <div className="mb-6">
         <SuggestionsCard />
       </div>
 
       {/* Timeline + Tool Distribution */}
-      <div className="grid grid-cols-12 gap-3 mb-3">
-        <div className="col-span-8 border border-gray-200 p-3">
-          <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
+      <div className="grid grid-cols-12 gap-4 mb-6">
+        <div className="col-span-12 lg:col-span-8 card p-5">
+          <h3 className="text-label uppercase text-gray-400 tracking-[0.08em] mb-4">
             Activity Timeline
           </h3>
           {timelineLoading ? (
@@ -127,14 +127,14 @@ export default function EngineerOverviewPage() {
               label="Activities"
             />
           ) : (
-            <p className="text-small text-gray-500 py-8 text-center">
+            <p className="text-small text-gray-400 py-12 text-center">
               No activity data for this period.
             </p>
           )}
         </div>
 
-        <div className="col-span-4 border border-gray-200 p-3">
-          <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
+        <div className="col-span-12 lg:col-span-4 card p-5">
+          <h3 className="text-label uppercase text-gray-400 tracking-[0.08em] mb-4">
             Tool Distribution
           </h3>
           {toolsLoading ? (
@@ -144,7 +144,7 @@ export default function EngineerOverviewPage() {
               items={tools.map((t) => ({ label: t.tool, value: t.count }))}
             />
           ) : (
-            <p className="text-small text-gray-500 py-8 text-center">
+            <p className="text-small text-gray-400 py-12 text-center">
               No tool data.
             </p>
           )}
@@ -152,15 +152,17 @@ export default function EngineerOverviewPage() {
       </div>
 
       {/* Recent Activity Table */}
-      <div className="border border-gray-200 p-3">
-        <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
-          Recent Activity
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-label uppercase text-gray-400 tracking-[0.08em]">
+            Recent Activity
+          </h3>
           {totalActivities > 0 && (
-            <span className="text-gray-300 ml-1 tabular-nums">
-              ({totalActivities})
+            <span className="text-label text-gray-300 tabular-nums">
+              {totalActivities} total
             </span>
           )}
-        </h3>
+        </div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -181,6 +183,7 @@ export default function EngineerOverviewPage() {
                 </TableCell>
                 <TableCell>
                   <span
+                    className="flex items-center gap-1"
                     title={
                       a.captureMethod === "HEURISTIC"
                         ? `Confidence: ${(a.confidence * 100).toFixed(0)}% — detected via code pattern analysis`
@@ -191,9 +194,7 @@ export default function EngineerOverviewPage() {
                       {a.captureMethod}
                     </Badge>
                     {a.captureMethod === "HEURISTIC" && (
-                      <Badge variant="warning" className="ml-1">
-                        EST
-                      </Badge>
+                      <Badge variant="warning">EST</Badge>
                     )}
                   </span>
                 </TableCell>
@@ -206,7 +207,7 @@ export default function EngineerOverviewPage() {
             ))}
             {activities.length === 0 && (
               <TableRow>
-                <TableCell className="text-center text-gray-500 py-4" mono={false}>
+                <TableCell className="text-center text-gray-400 py-8" mono={false}>
                   No recent activity.
                 </TableCell>
               </TableRow>
@@ -214,7 +215,7 @@ export default function EngineerOverviewPage() {
           </TableBody>
         </Table>
         {hasNextPage && (
-          <div className="mt-2 text-center">
+          <div className="mt-4 text-center">
             <Button
               variant="secondary"
               size="sm"
@@ -226,7 +227,7 @@ export default function EngineerOverviewPage() {
           </div>
         )}
         {activities.some((a) => a.captureMethod === "HEURISTIC") && (
-          <p className="text-label text-gray-400 mt-2">
+          <p className="text-label text-gray-300 mt-4">
             Includes estimated data — heuristic records are detected via code
             pattern analysis and may not reflect confirmed AI usage.
           </p>

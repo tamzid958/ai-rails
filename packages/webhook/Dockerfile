@@ -7,6 +7,8 @@ COPY packages/dashboard/package.json packages/dashboard/
 COPY packages/gateway/package.json packages/gateway/
 COPY packages/cli/package.json packages/cli/
 COPY tsconfig.base.json ./
+COPY prisma/ prisma/
+COPY prisma.config.ts ./
 RUN npm ci
 COPY packages/shared/ packages/shared/
 COPY packages/webhook/ packages/webhook/

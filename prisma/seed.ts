@@ -150,6 +150,145 @@ async function main() {
     }
   }
 
+  // ── AI Activities (realistic spread) ──────────────────────────────
+
+  const tools = ["cursor", "copilot", "claude", "codex"];
+  const models = ["gpt-4o", "gpt-4o-mini", "claude-sonnet", "claude-haiku"];
+  const taskTypes = ["code-review", "test-gen", "docs", "commit-message", "refactor"];
+  const captureMethods = ["GATEWAY", "COMMIT_TAG", "HEURISTIC"] as const;
+  const branches = ["main", "feature/auth", "feature/payments", "fix/bug-123", "refactor/cleanup"];
+
+  const existingActivities = await prisma.aiActivity.count();
+  if (existingActivities === 0) {
+    console.log("  Creating AI activities...");
+    const activityData = [];
+    const now = Date.now();
+
+    for (const product of [payments, mobile]) {
+      for (const engineer of [admin, demo]) {
+        for (let i = 0; i < 25; i++) {
+          const method = captureMethods[i % 3]!;
+          const daysAgo = Math.floor(Math.random() * 30);
+          const inputTokens = Math.floor(Math.random() * 2000) + 100;
+          const outputTokens = Math.floor(Math.random() * 1000) + 50;
+          const model = models[i % 4]!;
+          const cost = method === "GATEWAY"
+            ? parseFloat(((inputTokens * 0.003 + outputTokens * 0.015) / 1000).toFixed(4))
+            : undefined;
+
+          activityData.push({
+            productId: product.id,
+            engineerId: engineer.id,
+            captureMethod: method,
+            confidence: method === "HEURISTIC" ? 0.7 : 1.0,
+            tool: tools[i % 4]!,
+            provider: method === "GATEWAY" ? "openai" : undefined,
+            model: method === "GATEWAY" ? model : undefined,
+            taskType: taskTypes[i % 5]!,
+            inputTokens: method === "GATEWAY" ? inputTokens : undefined,
+            outputTokens: method === "GATEWAY" ? outputTokens : undefined,
+            totalTokens: method === "GATEWAY" ? inputTokens + outputTokens : undefined,
+            estimatedCost: cost,
+            branchName: branches[i % 5]!,
+            commitSha: method !== "GATEWAY" ? randomBytes(20).toString("hex") : undefined,
+            repoFullName: product.id === payments.id ? "org/payments-api" : "org/mobile-ios",
+            createdAt: new Date(now - daysAgo * 86400000 - Math.random() * 86400000),
+          });
+        }
+      }
+    }
+
+    await prisma.aiActivity.createMany({ data: activityData });
+    console.log(`  Created ${activityData.length} AI activities`);
+  }
+
+  // ── PR Events ───────────────────────────────────────────────────────
+
+  const existingPrs = await prisma.prEvent.count();
+  if (existingPrs === 0) {
+    console.log("  Creating PR events...");
+    const prStatuses = ["MERGED", "MERGED", "MERGED", "CLOSED", "REVERTED"] as const;
+    const prData = [];
+
+    for (const product of [payments, mobile]) {
+      for (const engineer of [admin, demo]) {
+        for (let i = 0; i < 8; i++) {
+          const daysAgo = Math.floor(Math.random() * 30);
+          const status = prStatuses[i % 5]!;
+          const openedAt = new Date(Date.now() - (daysAgo + 2) * 86400000);
+          const mergedAt = status === "MERGED" ? new Date(Date.now() - daysAgo * 86400000) : undefined;
+          const closedAt = status !== "MERGED" ? new Date(Date.now() - daysAgo * 86400000) : undefined;
+
+          prData.push({
+            productId: product.id,
+            externalId: `gh-${product.slug}-${engineer.id.slice(0, 4)}-${i}`,
+            provider: "github",
+            repoFullName: product.id === payments.id ? "org/payments-api" : "org/mobile-ios",
+            prNumber: 100 + i,
+            branchName: branches[i % 5]!,
+            title: `PR #${100 + i}: ${["Fix auth flow", "Add tests", "Refactor DB", "Update docs", "Perf improvement", "Bug fix", "New feature", "Cleanup"][i]}`,
+            engineerId: engineer.id,
+            status,
+            reviewCycles: Math.floor(Math.random() * 3),
+            linesAdded: Math.floor(Math.random() * 500) + 10,
+            linesRemoved: Math.floor(Math.random() * 200),
+            filesChanged: Math.floor(Math.random() * 15) + 1,
+            dataRichness: "FULL" as const,
+            openedAt,
+            mergedAt,
+            closedAt,
+          });
+        }
+      }
+    }
+
+    await prisma.prEvent.createMany({ data: prData });
+    console.log(`  Created ${prData.length} PR events`);
+  }
+
+  // ── Recommendations ─────────────────────────────────────────────────
+
+  const existingRecs = await prisma.recommendation.count();
+  if (existingRecs === 0) {
+    console.log("  Creating recommendations...");
+    const recs = [
+      {
+        productId: payments.id,
+        type: "prompt-drift",
+        title: "High prompt drift detected for code-review",
+        body: "Demo Engineer's code-review override has drifted significantly from the base template. Consider updating the base template to incorporate useful changes.",
+        priority: 2,
+        engineerId: demo.id,
+      },
+      {
+        productId: payments.id,
+        type: "cost-alert",
+        title: "Daily AI cost spike detected",
+        body: "AI spending increased 40% over the past 3 days. Review recent gateway usage for inefficient prompts or excessive token consumption.",
+        priority: 3,
+      },
+      {
+        productId: mobile.id,
+        type: "tool-adoption",
+        title: "Low AI tool adoption in mobile-app",
+        body: "Only 1 of 2 engineers is actively using AI tools. Consider onboarding sessions or documentation to increase adoption.",
+        priority: 1,
+      },
+      {
+        productId: payments.id,
+        type: "effectiveness",
+        title: "Cursor shows highest acceptance rate",
+        body: "PRs assisted by Cursor have a 85% first-pass acceptance rate vs 60% for Copilot. Consider standardizing on Cursor for code-review tasks.",
+        priority: 2,
+      },
+    ];
+
+    for (const rec of recs) {
+      await prisma.recommendation.create({ data: rec });
+    }
+    console.log(`  Created ${recs.length} recommendations`);
+  }
+
   console.log("Seed complete.");
 }
 

@@ -4,31 +4,37 @@
   --font-sans: "Inter", "Helvetica Neue", Arial, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
 
-  /* Achromatic palette */
+  /* Achromatic palette — refined for depth */
   --color-black: #0a0a0a;
   --color-white: #fafafa;
-  --color-gray-50: #f5f5f5;
-  --color-gray-100: #ececec;
-  --color-gray-200: #d4d4d4;
+  --color-gray-50: #f7f7f7;
+  --color-gray-100: #efefef;
+  --color-gray-200: #d9d9d9;
   --color-gray-300: #b8b8b8;
-  --color-gray-500: #7a7a7a;
-  --color-gray-700: #4a4a4a;
-  --color-gray-800: #2e2e2e;
-  --color-gray-900: #1a1a1a;
+  --color-gray-400: #999;
+  --color-gray-500: #6e6e6e;
+  --color-gray-600: #575757;
+  --color-gray-700: #3d3d3d;
+  --color-gray-800: #2a2a2a;
+  --color-gray-900: #171717;
 
-  /* Semantic colors */
+  /* Semantic colors — higher saturation */
   --color-accent: #0047ff;
   --color-accent-hover: #0038cc;
-  --color-success: #1a8c3a;
-  --color-warning: #c67600;
-  --color-danger: #cc1b1b;
+  --color-accent-light: #e8eeff;
+  --color-success: #0d7a2e;
+  --color-success-light: #e6f5ea;
+  --color-warning: #b86e00;
+  --color-warning-light: #fff3e0;
+  --color-danger: #c41919;
+  --color-danger-light: #fde8e8;
 
   /* Chart palette */
   --color-chart-1: #0047ff;
-  --color-chart-2: #7a7a7a;
-  --color-chart-3: #1a8c3a;
-  --color-chart-4: #c67600;
-  --color-chart-5: #cc1b1b;
+  --color-chart-2: #6e6e6e;
+  --color-chart-3: #0d7a2e;
+  --color-chart-4: #b86e00;
+  --color-chart-5: #c41919;
   --color-chart-6: #6b4fbb;
 
   /* 8px spacing grid */
@@ -56,19 +62,19 @@
   --radius-4xl: 0;
   --radius-full: 0;
 
-  /* Typography scale */
-  --text-display: 3rem;
-  --text-display--line-height: 1.1;
-  --text-display--letter-spacing: -0.02em;
+  /* Typography scale — dramatic contrast between levels */
+  --text-display: 3.5rem;
+  --text-display--line-height: 1.05;
+  --text-display--letter-spacing: -0.025em;
   --text-display--font-weight: 300;
 
-  --text-h1: 2rem;
-  --text-h1--line-height: 1.2;
-  --text-h1--letter-spacing: -0.015em;
+  --text-h1: 2.25rem;
+  --text-h1--line-height: 1.15;
+  --text-h1--letter-spacing: -0.02em;
   --text-h1--font-weight: 400;
 
   --text-h2: 1.5rem;
-  --text-h2--line-height: 1.25;
+  --text-h2--line-height: 1.2;
   --text-h2--letter-spacing: -0.01em;
   --text-h2--font-weight: 500;
 
@@ -84,7 +90,7 @@
 
   --text-small: 0.8125rem;
   --text-small--line-height: 1.5;
-  --text-small--letter-spacing: 0.01em;
+  --text-small--letter-spacing: 0.005em;
   --text-small--font-weight: 400;
 
   --text-mono: 0.8125rem;
@@ -94,8 +100,14 @@
 
   --text-label: 0.6875rem;
   --text-label--line-height: 1.4;
-  --text-label--letter-spacing: 0.06em;
-  --text-label--font-weight: 500;
+  --text-label--letter-spacing: 0.08em;
+  --text-label--font-weight: 600;
+
+  /* Data display — large numbers in stat cards */
+  --text-metric: 2.5rem;
+  --text-metric--line-height: 1;
+  --text-metric--letter-spacing: -0.03em;
+  --text-metric--font-weight: 300;
 }
 
 /* Swiss reset */
@@ -113,8 +125,9 @@ body {
   font-size: 0.9375rem;
   line-height: 1.6;
   color: #0a0a0a;
-  background: #fafafa;
+  background: #f7f7f7;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Tabular numbers for data */
@@ -125,22 +138,162 @@ body {
 /* Swiss label style */
 .label {
   font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #7a7a7a;
+  color: #6e6e6e;
 }
 
 /* Separator */
 .separator {
   border: none;
-  border-top: 1px solid #ececec;
+  border-top: 1px solid #efefef;
+}
+
+/* Focus ring — Swiss: clean 2px accent outline offset */
+:focus-visible {
+  outline: 2px solid #0047ff;
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: #0047ff;
+  color: #fff;
 }
 
 /* Transitions only on interactive elements, max 120ms */
 button,
 a,
 input,
-select {
+select,
+textarea {
   transition: all 120ms ease;
+}
+
+/* Scrollbar — minimal Swiss style */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d9d9d9;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b8b8b8;
+}
+
+/* ─── Awwwards-level animations ─── */
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Stagger children — apply to parent, children get sequential delays */
+.stagger > * { animation: fade-in-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 60ms; }
+.stagger > *:nth-child(3) { animation-delay: 120ms; }
+.stagger > *:nth-child(4) { animation-delay: 180ms; }
+.stagger > *:nth-child(5) { animation-delay: 240ms; }
+.stagger > *:nth-child(6) { animation-delay: 300ms; }
+.stagger > *:nth-child(7) { animation-delay: 360ms; }
+.stagger > *:nth-child(8) { animation-delay: 420ms; }
+
+/* Premium card treatment */
+.card {
+  background: #fff;
+  border: 1px solid #efefef;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.card:hover {
+  border-color: #d9d9d9;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.card-interactive {
+  background: #fff;
+  border: 1px solid #efefef;
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  border-color: #d9d9d9;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.card-interactive:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Subtle noise grain overlay for premium texture */
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Accent line — bold horizontal rule, used as visual anchor */
+.accent-rule {
+  width: 32px;
+  height: 3px;
+  background: #0047ff;
+}
+
+/* Text gradient for hero moments */
+.text-gradient {
+  background: linear-gradient(135deg, #0a0a0a 0%, #3d3d3d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }

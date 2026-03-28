@@ -13,11 +13,11 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     const id = useId();
 
     return (
-      <div className={clsx("flex flex-col gap-1", className)}>
+      <div className={clsx("flex flex-col gap-1.5", className)}>
         {label && (
           <label
             htmlFor={id}
-            className="text-label uppercase text-gray-500 tracking-[0.06em]"
+            className="text-label uppercase text-gray-400 tracking-[0.08em] font-semibold"
           >
             {label}
           </label>
@@ -26,17 +26,17 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={id}
           className={clsx(
-            "w-full p-2 text-body bg-white text-black outline-none ring-0",
+            "w-full px-3 py-2.5 text-body bg-white text-black outline-none ring-0 placeholder:text-gray-300 transition-colors",
             error
               ? "border-2 border-danger"
-              : "border border-gray-200 focus:border-2 focus:border-accent",
+              : "border border-gray-200 hover:border-gray-300 focus:border-2 focus:border-accent",
           )}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
           {...props}
         />
         {error && (
-          <p id={`${id}-error`} className="text-small text-danger">
+          <p id={`${id}-error`} className="text-small text-danger font-medium">
             {error}
           </p>
         )}

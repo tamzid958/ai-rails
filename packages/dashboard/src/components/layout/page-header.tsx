@@ -11,17 +11,18 @@ function PageHeader({ title, description, actions, className }: PageHeaderProps)
   return (
     <div
       className={clsx(
-        "flex justify-between items-start border-b border-gray-200 pb-3 mb-4",
+        "flex justify-between items-end pb-4 mb-6",
         className,
       )}
     >
       <div>
-        <h1 className="text-display">{title}</h1>
+        <div className="accent-rule mb-3" />
+        <h1 className="text-display text-black">{title}</h1>
         {description && (
-          <p className="text-body text-gray-500 mt-1">{description}</p>
+          <p className="text-body text-gray-500 mt-1 max-w-lg">{description}</p>
         )}
       </div>
-      {actions && <div>{actions}</div>}
+      {actions && <div className="shrink-0 ml-4">{actions}</div>}
     </div>
   );
 }

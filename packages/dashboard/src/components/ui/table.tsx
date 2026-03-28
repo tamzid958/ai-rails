@@ -7,9 +7,11 @@ type TableProps = {
 
 function Table({ children, className }: TableProps) {
   return (
-    <table className={clsx("w-full border-collapse", className)}>
-      {children}
-    </table>
+    <div className="overflow-x-auto">
+      <table className={clsx("w-full border-collapse", className)}>
+        {children}
+      </table>
+    </div>
   );
 }
 
@@ -23,7 +25,7 @@ function TableBody({ children, className }: TableProps) {
 
 function TableRow({ children, className }: TableProps) {
   return (
-    <tr className={clsx("border-b border-gray-100 hover:bg-gray-50", className)}>
+    <tr className={clsx("border-b border-gray-100 transition-colors hover:bg-gray-50/80", className)}>
       {children}
     </tr>
   );
@@ -38,7 +40,7 @@ function TableHead({ children, className }: TableHeadProps) {
   return (
     <th
       className={clsx(
-        "text-left text-label uppercase text-gray-500 tracking-[0.06em] border-b border-gray-200 p-2",
+        "text-left text-label uppercase text-gray-400 tracking-[0.08em] font-semibold border-b-2 border-gray-900 py-2.5 px-3",
         className,
       )}
     >
@@ -57,8 +59,8 @@ function TableCell({ children, className, mono = false }: TableCellProps) {
   return (
     <td
       className={clsx(
-        "text-body p-2",
-        mono && "font-mono text-mono",
+        "text-body py-2.5 px-3",
+        mono && "font-mono text-mono text-gray-600",
         className,
       )}
     >

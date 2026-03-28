@@ -38,20 +38,20 @@ export default function TeamOverviewPage() {
   });
 
   return (
-    <div>
-      <div className="flex items-start justify-between mb-3">
-        <PageHeader title="Team Overview" />
+    <div className="animate-fade-in">
+      <div className="flex items-end justify-between mb-6">
+        <PageHeader title="Team Overview" className="mb-0 pb-0" />
         <PeriodSelector value={period} onChange={setPeriod} />
       </div>
 
       {overviewLoading ? (
-        <div className="grid grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-30" />
           ))}
         </div>
       ) : overview ? (
-        <div className="grid grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger">
           <StatCard
             title="Total Activities"
             value={overview.totalActivities.toLocaleString()}
@@ -75,12 +75,12 @@ export default function TeamOverviewPage() {
       ) : null}
 
       {/* Team Insights */}
-      <div className="mb-3">
+      <div className="mb-6">
         <InsightsCard />
       </div>
 
-      <div className="border border-gray-200 p-3 mb-3">
-        <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
+      <div className="card p-5 mb-6">
+        <h3 className="text-label uppercase text-gray-400 tracking-[0.08em] mb-4">
           Team Activity Trend
         </h3>
         {timelineLoading ? (
@@ -96,32 +96,32 @@ export default function TeamOverviewPage() {
             ]}
           />
         ) : (
-          <p className="text-small text-gray-500 py-8 text-center">
+          <p className="text-small text-gray-400 py-12 text-center">
             No activity data for this period.
           </p>
         )}
       </div>
 
-      <div className="border border-gray-200 p-3">
-        <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
+      <div className="card p-5">
+        <h3 className="text-label uppercase text-gray-400 tracking-[0.08em] mb-4">
           Data Coverage
         </h3>
         {coverageLoading ? (
           <Skeleton className="h-10" />
         ) : coverage && coverage.total > 0 ? (
           <div>
-            <div className="flex h-8 w-full">
+            <div className="flex h-10 w-full overflow-hidden">
               {(["FULL", "TAGGED", "HEURISTIC", "NONE"] as const).map((level) => {
                 const pct = (coverage[level] / coverage.total) * 100;
                 if (pct === 0) return null;
                 return (
                   <div
                     key={level}
-                    className="h-full flex items-center justify-center text-label uppercase tracking-[0.06em]"
+                    className="h-full flex items-center justify-center text-label uppercase tracking-[0.08em] font-semibold transition-all"
                     style={{
                       width: `${pct}%`,
                       backgroundColor: COVERAGE_COLORS[level],
-                      color: level === "NONE" ? "#374151" : "#fff",
+                      color: level === "NONE" ? "#575757" : "#fff",
                     }}
                   >
                     {pct >= 8 ? `${Math.round(pct)}%` : ""}
@@ -129,22 +129,25 @@ export default function TeamOverviewPage() {
                 );
               })}
             </div>
-            <div className="flex gap-4 mt-2">
+            <div className="flex gap-5 mt-3">
               {(["FULL", "TAGGED", "HEURISTIC", "NONE"] as const).map((level) => (
-                <div key={level} className="flex items-center gap-1">
+                <div key={level} className="flex items-center gap-1.5">
                   <div
-                    className="w-3 h-3"
+                    className="w-2.5 h-2.5"
                     style={{ backgroundColor: COVERAGE_COLORS[level] }}
                   />
-                  <span className="text-label uppercase tracking-[0.06em] text-gray-500">
-                    {level} ({coverage[level]})
+                  <span className="text-label uppercase tracking-[0.08em] text-gray-400">
+                    {level}
+                  </span>
+                  <span className="text-label tabular-nums text-gray-300">
+                    {coverage[level]}
                   </span>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <p className="text-small text-gray-500 py-4 text-center">
+          <p className="text-small text-gray-400 py-8 text-center">
             No coverage data.
           </p>
         )}

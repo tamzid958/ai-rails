@@ -17,16 +17,16 @@ type PeriodSelectorProps = {
 
 export function PeriodSelector({ value, onChange }: PeriodSelectorProps) {
   return (
-    <div className="flex gap-0 border border-gray-200">
+    <div className="flex gap-0 border border-gray-200 bg-white">
       {PERIODS.map((p) => (
         <button
           key={p.value}
           onClick={() => onChange(p.value)}
           className={clsx(
-            "px-2 py-1 text-small font-medium",
+            "px-3 py-1.5 text-label tracking-[0.06em] font-semibold uppercase transition-colors",
             value === p.value
-              ? "bg-black text-white"
-              : "bg-white text-gray-700 hover:bg-gray-50",
+              ? "bg-gray-900 text-white"
+              : "text-gray-400 hover:text-black hover:bg-gray-50",
             "border-r border-gray-200 last:border-r-0",
           )}
         >

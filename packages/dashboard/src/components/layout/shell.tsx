@@ -10,13 +10,17 @@ type ShellProps = {
 
 export function Shell({ children, productSlug, canManageTeam }: ShellProps) {
   return (
-    <div className="flex h-screen">
+    <div className="grain flex h-screen bg-gray-50">
       <div className="hidden md:flex">
         <Sidebar productSlug={productSlug} canManageTeam={canManageTeam} />
       </div>
-      <div className="flex flex-1 flex-col">
+      <div className="flex flex-1 flex-col min-w-0">
         <Topbar productSlug={productSlug} canManageTeam={canManageTeam} />
-        <main className="flex-1 overflow-auto p-4">{children}</main>
+        <main className="flex-1 overflow-auto p-5 lg:p-8 animate-fade-in">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );
