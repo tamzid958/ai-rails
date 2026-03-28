@@ -57,4 +57,4 @@ jobs:
       - run: npm ci
       - run: npx prisma generate --schema prisma/schema.prisma
       - run: npx prisma db push
-      - run: npx turbo test:integration
+      - run: npx turbo test:integration --concurrency 1
