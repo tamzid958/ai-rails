@@ -101,6 +101,7 @@ CREATE TABLE "AiActivity" (
     "repoFullName" TEXT,
     "promptTemplateId" TEXT,
     "gatewayRequestId" TEXT,
+    "prEventId" TEXT,
     "metadata" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -228,6 +229,9 @@ CREATE INDEX "AiActivity_productId_engineerId_branchName_idx" ON "AiActivity"("p
 CREATE INDEX "AiActivity_productId_promptTemplateId_idx" ON "AiActivity"("productId", "promptTemplateId");
 
 -- CreateIndex
+CREATE INDEX "AiActivity_prEventId_idx" ON "AiActivity"("prEventId");
+
+-- CreateIndex
 CREATE INDEX "PromptTemplate_productId_taskType_idx" ON "PromptTemplate"("productId", "taskType");
 
 -- CreateIndex
@@ -274,6 +278,9 @@ ALTER TABLE "AiActivity" ADD CONSTRAINT "AiActivity_engineerId_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "AiActivity" ADD CONSTRAINT "AiActivity_promptTemplateId_fkey" FOREIGN KEY ("promptTemplateId") REFERENCES "PromptTemplate"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AiActivity" ADD CONSTRAINT "AiActivity_prEventId_fkey" FOREIGN KEY ("prEventId") REFERENCES "PrEvent"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PromptTemplate" ADD CONSTRAINT "PromptTemplate_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
