@@ -1,31 +1,18 @@
-import { auth } from "@/lib/auth";
+"use client";
+
 import { UserMenu } from "./user-menu";
 import { MobileNav } from "./mobile-nav";
 
-type TopbarProps = {
-  productSlug: string;
-  canManageTeam: boolean;
-};
+type TopbarProps = { productSlug: string; canManageTeam: boolean; userName: string };
 
-export async function Topbar({ productSlug, canManageTeam }: TopbarProps) {
-  const session = await auth();
-  const name = session?.user?.name ?? session?.user?.email ?? "";
-
+export function Topbar({ productSlug, canManageTeam, userName }: TopbarProps) {
   return (
-    <header className="h-14 min-h-14 border-b border-gray-200 bg-white flex items-center justify-between px-5 lg:px-8">
+    <header className="h-14 min-h-14 border-b border-border-subtle bg-black/80 backdrop-blur-xl flex items-center justify-between px-4 sm:px-6 lg:px-8">
       <div className="flex items-center gap-3">
         <MobileNav productSlug={productSlug} canManageTeam={canManageTeam} />
-        <span className="text-body font-semibold tracking-[0.06em] text-black uppercase">
-          AIRAILS
-        </span>
-        <span className="hidden sm:block w-px h-4 bg-gray-200" />
-        <span className="hidden sm:block text-label text-gray-400 tracking-[0.08em]">
-          DASHBOARD
-        </span>
+        <span className="lg:hidden text-sm font-bold tracking-tight text-white">AIRAILS</span>
       </div>
-      <div className="flex items-center gap-3">
-        {session?.user && <UserMenu name={name} />}
-      </div>
+      <UserMenu name={userName} />
     </header>
   );
 }

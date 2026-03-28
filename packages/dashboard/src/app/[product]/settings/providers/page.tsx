@@ -51,7 +51,7 @@ export default function ProvidersPage() {
                   <TableCell>{p.allowed ? "✓" : "✗"}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={p.status === "ACTIVE" ? "success" : "danger"}
+                      variant={p.status === "ACTIVE" ? "success" : "error"}
                     >
                       {p.status}
                     </Badge>

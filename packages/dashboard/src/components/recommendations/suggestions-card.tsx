@@ -1,118 +1,74 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useProduct } from "@/lib/product-context";
-import { api, type RecommendationRow } from "@/lib/api-client";
+import { api } from "@/lib/api-client";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Lightbulb, X } from "lucide-react";
 
 const PRIORITY_CONFIG = {
-  2: { label: "HIGH", variant: "danger" },
+  2: { label: "HIGH", variant: "error" },
   1: { label: "MEDIUM", variant: "warning" },
   0: { label: "LOW", variant: "default" },
 } as const;
 
-function PriorityBadge({ priority }: { priority: number }) {
-  const config = PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG] ?? PRIORITY_CONFIG[0];
-  return (
-    <Badge variant={config.variant as "danger" | "warning" | "default"}>
-      {config.label}
-    </Badge>
-  );
-}
-
 export function SuggestionsCard() {
   const { product, engineer } = useProduct();
-  const engineerId = engineer.id;
   const queryClient = useQueryClient();
+  const [showAll, setShowAll] = useState(false);
 
   const { data: recs, isLoading } = useQuery({
-    queryKey: ["recommendations", product.id, engineerId],
-    queryFn: () => api.getRecommendations(product.id, engineerId),
+    queryKey: ["recommendations", product.id, engineer.id],
+    queryFn: () => api.getRecommendations(product.id, engineer.id),
   });
 
   const dismissMutation = useMutation({
     mutationFn: (id: string) => api.dismissRecommendation(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["recommendations", product.id],
-      });
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["recommendations", product.id] }),
   });
 
   const activeRecs = recs?.filter((r) => !r.dismissedAt) ?? [];
+  const MAX_VISIBLE = 3;
+  const visibleRecs = showAll ? activeRecs : activeRecs.slice(0, MAX_VISIBLE);
+  const hasMore = activeRecs.length > MAX_VISIBLE;
 
-  if (isLoading) {
-    return (
-      <div className="border border-gray-200 p-3">
-        <Skeleton className="h-32" />
-      </div>
-    );
-  }
+  if (isLoading) return <Skeleton className="h-24 rounded-lg" />;
+  if (activeRecs.length === 0) return null;
 
   return (
-    <div className="border border-gray-200 p-3">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-label uppercase text-gray-500 tracking-[0.06em]">
-          Suggestions
-        </h3>
-        {activeRecs.length > 0 && (
-          <span className="text-label text-gray-400">
-            {activeRecs.length} new
-          </span>
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Lightbulb size={14} strokeWidth={1.5} className="text-accent" />
+          <span className="text-xs font-medium text-text-tertiary">{activeRecs.length} suggestion{activeRecs.length !== 1 ? "s" : ""}</span>
+        </div>
+        {hasMore && (
+          <button onClick={() => setShowAll(!showAll)} className="text-xs text-accent hover:text-accent-hover cursor-pointer transition-colors">
+            {showAll ? "Show less" : "View all"}
+          </button>
         )}
       </div>
-
-      {activeRecs.length === 0 ? (
-        <p className="text-small text-gray-500 py-4 text-center">
-          No suggestions right now.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {activeRecs.map((rec) => (
-            <RecommendationItem
-              key={rec.id}
-              rec={rec}
-              onDismiss={() => dismissMutation.mutate(rec.id)}
-              dismissing={dismissMutation.isPending}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function RecommendationItem({
-  rec,
-  onDismiss,
-  dismissing,
-}: {
-  rec: RecommendationRow;
-  onDismiss: () => void;
-  dismissing: boolean;
-}) {
-  return (
-    <div className="border-t border-gray-100 pt-3 first:border-t-0 first:pt-0">
-      <p className="text-small text-gray-700 mb-2">{rec.body}</p>
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1">
-          {rec.type === "switch_to_base" && (
-            <Button variant="secondary" size="sm" disabled>
-              Switch to Base
-            </Button>
-          )}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onDismiss}
-            loading={dismissing}
-          >
-            Dismiss
-          </Button>
-        </div>
-        <PriorityBadge priority={rec.priority} />
+      <div className="flex flex-col gap-2">
+        {visibleRecs.map((rec) => {
+          const config = PRIORITY_CONFIG[rec.priority as keyof typeof PRIORITY_CONFIG] ?? PRIORITY_CONFIG[0];
+          return (
+            <div key={rec.id} className="flex items-start gap-3 bg-surface rounded-lg border border-border-subtle p-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-text-secondary leading-relaxed">{rec.body}</p>
+              </div>
+              <Badge variant={config.variant as "error" | "warning" | "default"} className="shrink-0 mt-0.5">{config.label}</Badge>
+              <button
+                onClick={() => dismissMutation.mutate(rec.id)}
+                className="text-text-muted hover:text-text-secondary cursor-pointer transition-colors shrink-0 mt-0.5 p-0.5"
+                aria-label="Dismiss"
+              >
+                <X size={14} strokeWidth={1.5} />
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

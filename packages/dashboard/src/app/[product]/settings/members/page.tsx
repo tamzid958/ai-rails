@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 
 const ROLE_VARIANT = {
-  OWNER: "accent",
+  OWNER: "info",
   LEAD: "success",
   MEMBER: "default",
 } as const;
@@ -121,7 +121,7 @@ export default function MembersPage() {
           <Select
             label="Role"
             value={role}
-            onChange={(e) => setRole(e.target.value)}
+            onValueChange={(value) => setRole(value)}
             options={roleOptions}
             className="w-36"
           />

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from "./button";
+import clsx from "clsx";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -14,49 +15,29 @@ type ConfirmDialogProps = {
   onCancel: () => void;
 };
 
-function ConfirmDialog({
-  open,
-  title,
-  description,
-  confirmLabel = "Confirm",
-  variant = "danger",
-  loading = false,
-  onConfirm,
-  onCancel,
-}: ConfirmDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    const el = dialogRef.current;
-    if (!el) return;
-    if (open && !el.open) el.showModal();
-    if (!open && el.open) el.close();
-  }, [open]);
-
+function ConfirmDialog({ open, title, description, confirmLabel = "Confirm", variant = "danger", loading = false, onConfirm, onCancel }: ConfirmDialogProps) {
   return (
-    <dialog
-      ref={dialogRef}
-      onClose={onCancel}
-      className="backdrop:bg-black/40 bg-white border border-gray-200 p-0 w-100 max-w-full"
-    >
-      <div className="p-4">
-        <h2 className="text-body font-semibold mb-2">{title}</h2>
-        <p className="text-small text-gray-600">{description}</p>
-      </div>
-      <div className="flex justify-end gap-2 border-t border-gray-200 px-4 py-3">
-        <Button variant="secondary" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          variant={variant}
-          size="sm"
-          loading={loading}
-          onClick={onConfirm}
+    <DialogPrimitive.Root open={open} onOpenChange={(o) => !o && onCancel()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm data-[state=open]:animate-fade-in" />
+        <DialogPrimitive.Content
+          className={clsx(
+            "fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2",
+            "w-full max-w-md bg-surface border border-border-subtle rounded-xl shadow-xl p-0",
+            "data-[state=open]:animate-scale-in",
+          )}
         >
-          {confirmLabel}
-        </Button>
-      </div>
-    </dialog>
+          <div className="p-6">
+            <DialogPrimitive.Title className="text-lg font-semibold text-text-primary">{title}</DialogPrimitive.Title>
+            <DialogPrimitive.Description className="text-sm text-text-tertiary mt-1.5">{description}</DialogPrimitive.Description>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border-subtle px-6 py-4">
+            <Button variant="secondary" size="sm" onClick={onCancel}>Cancel</Button>
+            <Button variant={variant} size="sm" loading={loading} onClick={onConfirm}>{confirmLabel}</Button>
+          </div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 

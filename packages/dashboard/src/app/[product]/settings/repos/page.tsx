@@ -95,7 +95,7 @@ export default function SettingsReposPage() {
           <Select
             label="Provider"
             value={provider}
-            onChange={(e) => setProvider(e.target.value)}
+            onValueChange={(value) => setProvider(value)}
             options={[
               { value: "github", label: "GitHub" },
               { value: "gitlab", label: "GitLab" },

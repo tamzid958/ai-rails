@@ -1,19 +1,36 @@
 import clsx from "clsx";
+import type { ReactNode } from "react";
 
 type EmptyStateProps = {
   title: string;
   description?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
+  icon?: ReactNode;
+  compact?: boolean;
   className?: string;
 };
 
-function EmptyState({ title, description, action, className }: EmptyStateProps) {
+function EmptyState({ title, description, action, icon, compact = false, className }: EmptyStateProps) {
   return (
-    <div className={clsx("flex flex-col items-center justify-center py-16 text-center animate-fade-in", className)}>
-      <div className="w-12 h-px bg-gray-200 mb-5" />
-      <h3 className="text-h2 text-gray-900">{title}</h3>
+    <div
+      className={clsx(
+        "flex flex-col items-center justify-center text-center animate-fade-in",
+        compact ? "py-8" : "py-16",
+        className,
+      )}
+    >
+      {icon && (
+        <div className="mb-4 text-gray-600">
+          {icon}
+        </div>
+      )}
+      <h3 className="text-base font-medium text-text-primary">
+        {title}
+      </h3>
       {description && (
-        <p className="text-body text-gray-400 mt-2 max-w-sm">{description}</p>
+        <p className="text-sm text-text-tertiary mt-1 max-w-sm">
+          {description}
+        </p>
       )}
       {action && <div className="mt-5">{action}</div>}
     </div>

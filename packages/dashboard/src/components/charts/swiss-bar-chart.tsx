@@ -1,87 +1,42 @@
 "use client";
 
 import clsx from "clsx";
+import { useChartColors } from "./use-chart-colors";
 
-const CHART_COLORS = [
-  "#0047FF",
-  "#7A7A7A",
-  "#1A8C3A",
-  "#C67600",
-  "#CC1B1B",
-  "#6B4FBB",
-];
+type BarItem = { label: string; value: number };
 
-type BarItem = {
-  label: string;
-  value: number;
-};
-
-type SwissHorizontalBarProps = {
-  items: BarItem[];
-  className?: string;
-};
-
-export function SwissHorizontalBar({ items, className }: SwissHorizontalBarProps) {
+export function SwissHorizontalBar({ items, className }: { items: BarItem[]; className?: string }) {
+  const colors = useChartColors();
   const max = Math.max(...items.map((i) => i.value), 1);
 
   return (
-    <div className={clsx("flex flex-col gap-2", className)}>
+    <div className={clsx("flex flex-col gap-3", className)}>
       {items.map((item, i) => (
-        <div key={item.label} className="flex items-center gap-2">
-          <span className="text-small text-gray-700 w-24 text-right truncate">
-            {item.label}
-          </span>
-          <div className="flex-1 h-5 bg-gray-50">
-            <div
-              className="h-full"
-              style={{
-                width: `${(item.value / max) * 100}%`,
-                backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
-              }}
-            />
+        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ width: 96, textAlign: "right", fontSize: 13, color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+          <div style={{ flex: 1, height: 20, background: "var(--color-surface)", borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${(item.value / max) * 100}%`, backgroundColor: colors[i % colors.length], borderRadius: 2, transition: "width 500ms ease-out" }} />
           </div>
-          <span className="text-small tabular-nums text-gray-700 w-10 text-right">
-            {item.value}
-          </span>
+          <span style={{ width: 40, textAlign: "right", fontSize: 13, color: "var(--color-text-secondary)" }} className="tabular-nums">{item.value}</span>
         </div>
       ))}
     </div>
   );
 }
 
-type GroupedBarItem = {
-  label: string;
-  segments: { label: string; value: number; color: string }[];
-};
+type GroupedBarItem = { label: string; segments: { label: string; value: number; color: string }[] };
 
-type SwissGroupedBarProps = {
-  items: GroupedBarItem[];
-  className?: string;
-};
-
-export function SwissGroupedBar({ items, className }: SwissGroupedBarProps) {
-  const max = Math.max(
-    ...items.map((i) => i.segments.reduce((sum, s) => sum + s.value, 0)),
-    1,
-  );
+export function SwissGroupedBar({ items, className }: { items: GroupedBarItem[]; className?: string }) {
+  const max = Math.max(...items.map((i) => i.segments.reduce((sum, s) => sum + s.value, 0)), 1);
 
   return (
-    <div className={clsx("flex flex-col gap-2", className)}>
+    <div className={clsx("flex flex-col gap-3", className)}>
       {items.map((item) => (
-        <div key={item.label} className="flex items-center gap-2">
-          <span className="text-small text-gray-700 w-24 text-right truncate">
-            {item.label}
-          </span>
-          <div className="flex-1 h-5 bg-gray-50 flex">
+        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ width: 96, textAlign: "right", fontSize: 13, color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+          <div style={{ flex: 1, height: 20, background: "var(--color-surface)", borderRadius: 2, overflow: "hidden", display: "flex" }}>
             {item.segments.map((seg) => (
-              <div
-                key={seg.label}
-                className="h-full"
-                style={{
-                  width: `${(seg.value / max) * 100}%`,
-                  backgroundColor: seg.color,
-                }}
-              />
+              <div key={seg.label} style={{ height: "100%", width: `${(seg.value / max) * 100}%`, backgroundColor: seg.color }} />
             ))}
           </div>
         </div>
@@ -90,47 +45,28 @@ export function SwissGroupedBar({ items, className }: SwissGroupedBarProps) {
   );
 }
 
-type ComparisonBarProps = {
-  items: { label: string; myValue: number; teamValue: number }[];
-  className?: string;
-};
-
-export function SwissComparisonBar({ items, className }: ComparisonBarProps) {
-  const max = Math.max(
-    ...items.flatMap((i) => [i.myValue, i.teamValue]),
-    1,
-  );
+export function SwissComparisonBar({ items, className }: { items: { label: string; myValue: number; teamValue: number }[]; className?: string }) {
+  const colors = useChartColors();
+  const max = Math.max(...items.flatMap((i) => [i.myValue, i.teamValue]), 1);
 
   return (
-    <div className={clsx("flex flex-col gap-3", className)}>
+    <div className={clsx("flex flex-col gap-4", className)}>
       {items.map((item) => (
         <div key={item.label}>
-          <p className="text-label uppercase text-gray-500 tracking-[0.06em] mb-1">
-            {item.label}
-          </p>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-small text-gray-700 w-16">You</span>
-            <div className="flex-1 h-4 bg-gray-50">
-              <div
-                className="h-full bg-accent"
-                style={{ width: `${(item.myValue / max) * 100}%` }}
-              />
+          <p style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-tertiary)", marginBottom: 6 }}>{item.label}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+            <span style={{ width: 48, fontSize: 13, color: "var(--color-text-secondary)" }}>You</span>
+            <div style={{ flex: 1, height: 16, background: "var(--color-surface)", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${(item.myValue / max) * 100}%`, backgroundColor: colors[0], borderRadius: 2 }} />
             </div>
-            <span className="text-small tabular-nums w-14 text-right">
-              {item.myValue.toFixed(1)}%
-            </span>
+            <span style={{ width: 56, textAlign: "right", fontSize: 13, color: "var(--color-text-primary)" }} className="tabular-nums">{item.myValue.toFixed(1)}%</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-small text-gray-500 w-16">Team</span>
-            <div className="flex-1 h-4 bg-gray-50">
-              <div
-                className="h-full bg-gray-300"
-                style={{ width: `${(item.teamValue / max) * 100}%` }}
-              />
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <span style={{ width: 48, fontSize: 13, color: "var(--color-text-tertiary)" }}>Team</span>
+            <div style={{ flex: 1, height: 16, background: "var(--color-surface)", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${(item.teamValue / max) * 100}%`, backgroundColor: colors[1], borderRadius: 2 }} />
             </div>
-            <span className="text-small tabular-nums text-gray-500 w-14 text-right">
-              {item.teamValue.toFixed(1)}%
-            </span>
+            <span style={{ width: 56, textAlign: "right", fontSize: 13, color: "var(--color-text-tertiary)" }} className="tabular-nums">{item.teamValue.toFixed(1)}%</span>
           </div>
         </div>
       ))}

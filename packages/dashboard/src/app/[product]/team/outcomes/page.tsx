@@ -19,14 +19,14 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-const STATUS_VARIANT: Record<string, "default" | "accent" | "success" | "warning" | "danger"> = {
+const STATUS_VARIANT: Record<string, "default" | "info" | "success" | "warning" | "error"> = {
   OPENED: "default",
   REVIEW_IN_PROGRESS: "default",
   CHANGES_REQUESTED: "warning",
   APPROVED: "success",
-  MERGED: "accent",
-  CLOSED: "danger",
-  REVERTED: "danger",
+  MERGED: "info",
+  CLOSED: "error",
+  REVERTED: "error",
 };
 
 export default function TeamOutcomesPage() {

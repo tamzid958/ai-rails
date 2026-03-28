@@ -8,13 +8,10 @@ function Skeleton({ className }: SkeletonProps) {
   return (
     <div
       className={clsx(
-        "relative overflow-hidden bg-gray-100",
+        "bg-gray-800 skeleton-shimmer rounded-md",
         className,
       )}
-    >
-      <div className="absolute inset-0 animate-[shimmer_1.5s_infinite] bg-linear-to-r from-transparent via-white/60 to-transparent" style={{ transform: "translateX(-100%)" }} />
-      <style>{`@keyframes shimmer { 100% { transform: translateX(100%); } }`}</style>
-    </div>
+    />
   );
 }
 

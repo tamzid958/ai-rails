@@ -20,7 +20,7 @@ const DRIFT_VARIANT = {
   NONE: "default",
   LOW: "success",
   MEDIUM: "warning",
-  HIGH: "danger",
+  HIGH: "error",
 } as const;
 
 export default function ConfigDriftPage() {

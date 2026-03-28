@@ -1,11 +1,12 @@
 import clsx from "clsx";
 
 const VARIANT_CLASSES = {
-  default: "bg-gray-100 text-gray-600 border-gray-200",
-  accent: "bg-accent-light text-accent border-accent/20",
-  success: "bg-success-light text-success border-success/20",
-  warning: "bg-warning-light text-warning border-warning/20",
-  danger: "bg-danger-light text-danger border-danger/20",
+  default: "bg-gray-800 text-text-tertiary",
+  success: "bg-success/10 text-success",
+  warning: "bg-warning/10 text-warning",
+  error: "bg-danger/10 text-danger",
+  info: "bg-info/10 text-info",
+  outline: "bg-transparent text-text-tertiary border border-border-muted",
 } as const;
 
 type BadgeProps = {
@@ -18,7 +19,7 @@ function Badge({ variant = "default", children, className }: BadgeProps) {
   return (
     <span
       className={clsx(
-        "inline-flex items-center border px-1.5 py-0.5 text-label uppercase tracking-[0.08em] font-semibold leading-none",
+        "inline-flex items-center px-2.5 py-0.5 text-[11px] font-medium uppercase tracking-wide rounded leading-5",
         VARIANT_CLASSES[variant],
         className,
       )}

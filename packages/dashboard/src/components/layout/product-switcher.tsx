@@ -1,8 +1,16 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ChevronDown, Plus } from "lucide-react";
+import { Badge } from "../ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "../ui/dropdown-menu";
 
 type ProductItem = {
   slug: string;
@@ -16,68 +24,37 @@ type ProductSwitcherProps = {
 };
 
 function ProductSwitcher({ products, currentSlug }: ProductSwitcherProps) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
   const current = products.find((p) => p.slug === currentSlug);
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (ref.current && !ref.current.contains(event.target as Node)) {
-        setOpen(false);
-      }
-    }
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  function handleSelect(slug: string) {
-    setOpen(false);
-    router.push(`/${slug}/engineer`);
-  }
-
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="text-small font-medium text-black"
-      >
-        {current?.name ?? currentSlug} ▾
-      </button>
-
-      {open && (
-        <div className="absolute left-0 top-full z-50 min-w-[200px] border border-gray-200 bg-white">
-          {products.map((p) => (
-            <button
-              key={p.slug}
-              type="button"
-              onClick={() => handleSelect(p.slug)}
-              className={`flex w-full items-center gap-2 px-3 py-1 text-left text-small hover:bg-gray-50 ${
-                p.slug === currentSlug ? "border-l-2 border-accent" : ""
-              }`}
-            >
-              <span className="text-black">{p.name}</span>
-              <span className="text-label text-gray-500 uppercase">
-                {p.role}
-              </span>
-            </button>
-          ))}
-
-          <div className="border-t border-gray-100">
-            <Link
-              href="/products/create"
-              className="block px-3 py-1 text-small text-accent hover:bg-gray-50"
-              onClick={() => setOpen(false)}
-            >
-              Create Product
-            </Link>
-          </div>
-        </div>
-      )}
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-1.5 text-[14px] font-medium text-text-primary cursor-pointer outline-none">
+          {current?.name ?? currentSlug}
+          <ChevronDown size={14} className="text-text-tertiary" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {products.map((p) => (
+          <DropdownMenuItem
+            key={p.slug}
+            onClick={() => router.push(`/${p.slug}/engineer`)}
+            className={p.slug === currentSlug ? "bg-surface-raised!" : ""}
+          >
+            <span className="flex-1">{p.name}</span>
+            <Badge variant="outline">{p.role}</Badge>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/products/create" className="flex items-center gap-2">
+            <Plus size={14} strokeWidth={1.5} />
+            Create Product
+          </Link>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 

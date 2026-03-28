@@ -1,6 +1,16 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import { LogOut } from "lucide-react";
+import { Avatar } from "../ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "../ui/dropdown-menu";
 
 type UserMenuProps = {
   name: string;
@@ -8,22 +18,23 @@ type UserMenuProps = {
 
 export function UserMenu({ name }: UserMenuProps) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2">
-        <div className="w-6 h-6 bg-gray-900 flex items-center justify-center">
-          <span className="text-[10px] font-semibold text-white uppercase leading-none">
-            {name.charAt(0)}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="flex items-center gap-2 cursor-pointer outline-none">
+          <Avatar name={name} size="sm" />
+          <span className="hidden sm:block text-[14px] text-text-tertiary">
+            {name}
           </span>
-        </div>
-        <span className="hidden sm:block text-small text-gray-600">{name}</span>
-      </div>
-      <span className="w-px h-4 bg-gray-200" />
-      <button
-        onClick={() => signOut({ callbackUrl: "/" })}
-        className="text-label text-gray-400 tracking-[0.08em] hover:text-black"
-      >
-        Sign out
-      </button>
-    </div>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>{name}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/" })}>
+          <LogOut size={14} strokeWidth={1.5} />
+          Sign out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

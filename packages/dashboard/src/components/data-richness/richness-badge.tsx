@@ -7,7 +7,7 @@ const RICHNESS_CONFIG: Record<
   DataRichness,
   { variant: BadgeProps["variant"]; text: string }
 > = {
-  FULL: { variant: "accent", text: "FULL" },
+  FULL: { variant: "info", text: "FULL" },
   TAGGED: { variant: "success", text: "TAG" },
   HEURISTIC: { variant: "warning", text: "EST" },
   NONE: { variant: "default", text: "NONE" },

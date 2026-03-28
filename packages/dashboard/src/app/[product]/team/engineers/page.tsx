@@ -21,7 +21,7 @@ import {
 type SortKey = keyof Pick<TeamEngineerRow, "name" | "activities" | "acceptanceRate" | "cost">;
 
 const ROLE_VARIANT = {
-  OWNER: "accent",
+  OWNER: "info",
   LEAD: "success",
   MEMBER: "default",
 } as const;

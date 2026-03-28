@@ -1,45 +1,56 @@
 "use client";
 
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Menu, X } from "lucide-react";
 import { SidebarNav } from "./sidebar";
 
-type MobileNavProps = {
-  productSlug: string;
-  canManageTeam: boolean;
-};
+type MobileNavProps = { productSlug: string; canManageTeam: boolean };
 
 export function MobileNav({ productSlug, canManageTeam }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <button
         onClick={() => setIsOpen(true)}
-        className="text-label text-gray-600 tracking-[0.08em] px-1 py-1 hover:text-black"
+        className="text-text-tertiary hover:text-text-primary transition-colors cursor-pointer p-1 rounded-md hover:bg-surface-raised"
         aria-label="Open navigation"
       >
-        MENU
+        <Menu size={20} strokeWidth={1.5} />
       </button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 bg-white animate-fade-in">
-          <div className="flex items-center justify-between h-14 px-5 border-b border-gray-200">
-            <span className="text-body font-semibold tracking-[0.06em] text-black uppercase">
-              AIRAILS
-            </span>
-            <button
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
               onClick={() => setIsOpen(false)}
-              className="text-label text-gray-500 tracking-[0.08em] hover:text-black px-1 py-1"
-              aria-label="Close navigation"
+            />
+            <motion.div
+              initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              className="fixed inset-y-0 left-0 z-50 w-70 bg-surface border-r border-border-subtle shadow-xl rounded-r-xl"
             >
-              CLOSE
-            </button>
-          </div>
-          <div className="overflow-y-auto" onClick={() => setIsOpen(false)}>
-            <SidebarNav productSlug={productSlug} canManageTeam={canManageTeam} />
-          </div>
-        </div>
-      )}
+              <div className="flex items-center justify-between h-14 px-4 border-b border-border-subtle">
+                <span className="text-sm font-bold tracking-tight text-text-primary">AIRAILS</span>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="text-text-tertiary hover:text-text-primary transition-colors cursor-pointer p-1 rounded-md hover:bg-surface-raised"
+                  aria-label="Close navigation"
+                >
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </div>
+              <div className="overflow-y-auto" onClick={() => setIsOpen(false)}>
+                <SidebarNav productSlug={productSlug} canManageTeam={canManageTeam} />
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

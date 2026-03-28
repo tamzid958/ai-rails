@@ -1,25 +1,31 @@
 "use client";
 
 import { type ComponentPropsWithoutRef, forwardRef } from "react";
+import { Slot } from "@radix-ui/react-slot";
 import clsx from "clsx";
 
 const VARIANT_CLASSES = {
-  primary: "bg-accent text-white hover:bg-accent-hover active:bg-blue-800 shadow-[0_1px_2px_rgba(0,0,0,0.08)]",
-  secondary: "border border-gray-200 text-black hover:border-gray-300 hover:bg-gray-50 active:bg-gray-100",
-  ghost: "text-gray-600 hover:text-black hover:bg-gray-100 active:bg-gray-200",
-  danger: "bg-danger text-white hover:opacity-90 active:opacity-80 shadow-[0_1px_2px_rgba(0,0,0,0.08)]",
+  primary:
+    "bg-white text-gray-900 shadow-xs hover:bg-gray-100 hover:shadow-sm active:bg-white",
+  secondary:
+    "bg-surface-raised border border-border-muted text-text-secondary shadow-xs hover:bg-surface-raised hover:shadow-sm active:bg-surface-raised",
+  ghost:
+    "text-text-tertiary hover:bg-surface-raised hover:text-text-primary active:bg-surface-raised",
+  danger:
+    "bg-surface-raised border border-border-muted text-danger shadow-xs hover:bg-danger-tint hover:border-danger/30 active:bg-danger-tint",
 } as const;
 
 const SIZE_CLASSES = {
-  sm: "px-2.5 py-1 text-small gap-1.5",
-  md: "px-3.5 py-2 text-body gap-2",
-  lg: "px-5 py-2.5 text-body gap-2",
+  sm: "px-3 py-1.5 text-xs rounded-md",
+  md: "px-4 py-2.5 text-sm rounded-md",
+  lg: "px-5 py-3 text-sm rounded-md",
 } as const;
 
 type ButtonProps = ComponentPropsWithoutRef<"button"> & {
   variant?: keyof typeof VARIANT_CLASSES;
   size?: keyof typeof SIZE_CLASSES;
   loading?: boolean;
+  asChild?: boolean;
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -28,6 +34,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = "primary",
       size = "md",
       loading = false,
+      asChild = false,
       disabled,
       className,
       children,
@@ -36,27 +43,31 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref,
   ) => {
     const isDisabled = disabled || loading;
+    const Component = asChild ? Slot : "button";
 
     return (
-      <button
+      <Component
         ref={ref}
         disabled={isDisabled}
         className={clsx(
-          "inline-flex items-center justify-center font-medium transition-all",
+          "inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 cursor-pointer",
+          "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
           VARIANT_CLASSES[variant],
           SIZE_CLASSES[size],
-          isDisabled && "opacity-40 cursor-not-allowed pointer-events-none",
+          isDisabled && "opacity-50 cursor-not-allowed pointer-events-none",
           className,
         )}
         {...props}
       >
         {loading ? (
           <span className="flex items-center gap-2">
-            <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent animate-spin" style={{ borderRadius: "50%" }} />
+            <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
             <span>Loading</span>
           </span>
-        ) : children}
-      </button>
+        ) : (
+          children
+        )}
+      </Component>
     );
   },
 );

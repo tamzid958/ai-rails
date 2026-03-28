@@ -7,15 +7,16 @@ import { api, type Period } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ChartCard } from "@/components/ui/chart-card";
 import { PeriodSelector } from "@/components/engineer/period-selector";
 import { SwissStackedAreaChart, CHART_COLORS } from "@/components/charts/swiss-line-chart";
 import { InsightsCard } from "@/components/recommendations/insights-card";
 
 const COVERAGE_COLORS = {
-  FULL: "#0047FF",
-  TAGGED: "#1A8C3A",
-  HEURISTIC: "#C67600",
-  NONE: "#d1d5db",
+  FULL: "var(--color-chart-1)",
+  TAGGED: "var(--color-chart-3)",
+  HEURISTIC: "var(--color-chart-4)",
+  NONE: "var(--color-gray-600)",
 } as const;
 
 export default function TeamOverviewPage() {
@@ -38,54 +39,31 @@ export default function TeamOverviewPage() {
   });
 
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-end justify-between mb-6">
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <PageHeader title="Team Overview" className="mb-0 pb-0" />
-        <PeriodSelector value={period} onChange={setPeriod} />
+        <div className="mt-3 sm:mt-0">
+          <PeriodSelector value={period} onChange={setPeriod} />
+        </div>
       </div>
 
       {overviewLoading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-30" />
-          ))}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28" />)}
         </div>
       ) : overview ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger">
-          <StatCard
-            title="Total Activities"
-            value={overview.totalActivities.toLocaleString()}
-            trend={{ value: overview.totalActivitiesTrend, label: "vs prev" }}
-          />
-          <StatCard
-            title="Acceptance Rate"
-            value={`${overview.acceptanceRate}%`}
-            trend={{ value: overview.acceptanceRateTrend, label: "vs prev" }}
-          />
-          <StatCard
-            title="Active Engineers"
-            value={`${overview.activeEngineers} / ${overview.totalMembers}`}
-          />
-          <StatCard
-            title="Monthly Cost"
-            value={`$${overview.monthlyCost.toFixed(2)}`}
-            trend={{ value: overview.monthlyCostTrend, label: "vs prev" }}
-          />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger">
+          <StatCard title="Total Activities" value={overview.totalActivities.toLocaleString()} trend={{ value: overview.totalActivitiesTrend, label: "vs prev" }} />
+          <StatCard title="Acceptance Rate" value={`${overview.acceptanceRate}%`} trend={{ value: overview.acceptanceRateTrend, label: "vs prev" }} />
+          <StatCard title="Active Engineers" value={`${overview.activeEngineers} / ${overview.totalMembers}`} />
+          <StatCard title="Monthly Cost" value={`$${overview.monthlyCost.toFixed(2)}`} trend={{ value: overview.monthlyCostTrend, label: "vs prev" }} />
         </div>
       ) : null}
 
-      {/* Team Insights */}
-      <div className="mb-6">
-        <InsightsCard />
-      </div>
+      <InsightsCard />
 
-      <div className="card p-5 mb-6">
-        <h3 className="text-label uppercase text-gray-400 tracking-[0.08em] mb-4">
-          Team Activity Trend
-        </h3>
-        {timelineLoading ? (
-          <Skeleton className="h-75" />
-        ) : timeline?.length ? (
+      <ChartCard title="Team Activity Trend">
+        {timelineLoading ? <Skeleton className="h-75" /> : timeline?.length ? (
           <SwissStackedAreaChart
             data={timeline}
             xKey="date"
@@ -96,62 +74,42 @@ export default function TeamOverviewPage() {
             ]}
           />
         ) : (
-          <p className="text-small text-gray-400 py-12 text-center">
-            No activity data for this period.
-          </p>
+          <p className="text-sm text-gray-400 text-center py-12">No activity data for this period.</p>
         )}
-      </div>
+      </ChartCard>
 
-      <div className="card p-5">
-        <h3 className="text-label uppercase text-gray-400 tracking-[0.08em] mb-4">
-          Data Coverage
-        </h3>
-        {coverageLoading ? (
-          <Skeleton className="h-10" />
-        ) : coverage && coverage.total > 0 ? (
+      <ChartCard title="Data Coverage">
+        {coverageLoading ? <Skeleton className="h-10" /> : coverage && coverage.total > 0 ? (
           <div>
-            <div className="flex h-10 w-full overflow-hidden">
+            <div className="flex h-8 w-full overflow-hidden rounded-md">
               {(["FULL", "TAGGED", "HEURISTIC", "NONE"] as const).map((level) => {
                 const pct = (coverage[level] / coverage.total) * 100;
                 if (pct === 0) return null;
                 return (
                   <div
                     key={level}
-                    className="h-full flex items-center justify-center text-label uppercase tracking-[0.08em] font-semibold transition-all"
-                    style={{
-                      width: `${pct}%`,
-                      backgroundColor: COVERAGE_COLORS[level],
-                      color: level === "NONE" ? "#575757" : "#fff",
-                    }}
+                    className="h-full flex items-center justify-center text-[11px] font-medium transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: COVERAGE_COLORS[level], color: level === "NONE" ? "var(--color-text-tertiary)" : "#fff" }}
                   >
                     {pct >= 8 ? `${Math.round(pct)}%` : ""}
                   </div>
                 );
               })}
             </div>
-            <div className="flex gap-5 mt-3">
+            <div className="flex gap-5 mt-4">
               {(["FULL", "TAGGED", "HEURISTIC", "NONE"] as const).map((level) => (
                 <div key={level} className="flex items-center gap-1.5">
-                  <div
-                    className="w-2.5 h-2.5"
-                    style={{ backgroundColor: COVERAGE_COLORS[level] }}
-                  />
-                  <span className="text-label uppercase tracking-[0.08em] text-gray-400">
-                    {level}
-                  </span>
-                  <span className="text-label tabular-nums text-gray-300">
-                    {coverage[level]}
-                  </span>
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COVERAGE_COLORS[level] }} />
+                  <span className="text-xs text-gray-500">{level}</span>
+                  <span className="text-xs tabular-nums text-gray-400">{coverage[level]}</span>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <p className="text-small text-gray-400 py-8 text-center">
-            No coverage data.
-          </p>
+          <p className="text-sm text-gray-400 text-center py-8">No coverage data.</p>
         )}
-      </div>
+      </ChartCard>
     </div>
   );
 }

@@ -37,10 +37,23 @@ export default async function ProductLayout({
     return <ForbiddenPage />;
   }
 
+  // Fetch all products for the switcher
+  const allMemberships = await prisma.productMembership.findMany({
+    where: { engineerId: engineer.id },
+    include: { product: { select: { name: true, slug: true } } },
+  });
+
+  const products = allMemberships.map((m) => ({
+    name: m.product.name,
+    slug: m.product.slug,
+    role: m.role as string,
+  }));
+
   const role = membership.role as "OWNER" | "LEAD" | "MEMBER";
   const isOwner = role === "OWNER";
   const isLead = role === "LEAD";
   const isMember = role === "MEMBER";
+  const userName = engineer.name || engineer.email || "";
 
   return (
     <ProductProvider
@@ -58,7 +71,12 @@ export default async function ProductLayout({
         isMember,
       }}
     >
-      <Shell productSlug={product.slug} canManageTeam={isOwner || isLead}>
+      <Shell
+        productSlug={product.slug}
+        canManageTeam={isOwner || isLead}
+        userName={userName}
+        products={products}
+      >
         {children}
       </Shell>
     </ProductProvider>

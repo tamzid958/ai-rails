@@ -100,7 +100,7 @@ function PromptRow({
       <TableRow>
         <TableCell mono>{prompt.taskType}</TableCell>
         <TableCell>
-          <Badge variant={prompt.isBase ? "default" : "accent"}>
+          <Badge variant={prompt.isBase ? "default" : "info"}>
             {prompt.isBase ? "base" : "override"}
           </Badge>
         </TableCell>

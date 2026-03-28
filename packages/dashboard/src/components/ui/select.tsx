@@ -1,63 +1,75 @@
 "use client";
 
-import { type ComponentPropsWithoutRef, forwardRef, useId } from "react";
+import * as SelectPrimitive from "@radix-ui/react-select";
+import { ChevronDown, Check } from "lucide-react";
 import clsx from "clsx";
 
-type SelectOption = {
-  value: string;
-  label: string;
-};
+type SelectOption = { value: string; label: string };
 
-type SelectProps = Omit<ComponentPropsWithoutRef<"select">, "id"> & {
+type SelectProps = {
   label?: string;
   error?: string;
   options: SelectOption[];
+  value?: string;
+  onValueChange?: (value: string) => void;
+  placeholder?: string;
+  className?: string;
 };
 
-const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ label, error, options, className, ...props }, ref) => {
-    const id = useId();
-
-    return (
-      <div className={clsx("flex flex-col gap-1", className)}>
-        {label && (
-          <label
-            htmlFor={id}
-            className="text-label uppercase text-gray-500 tracking-[0.06em]"
-          >
-            {label}
-          </label>
-        )}
-        <select
-          ref={ref}
-          id={id}
+function Select({ label, error, options, value, onValueChange, placeholder = "Select...", className }: SelectProps) {
+  return (
+    <div className={clsx("flex flex-col gap-1.5", className)}>
+      {label && (
+        <span className="text-sm font-medium text-text-secondary">{label}</span>
+      )}
+      <SelectPrimitive.Root value={value} onValueChange={onValueChange}>
+        <SelectPrimitive.Trigger
           className={clsx(
-            "w-full p-2 text-body bg-white text-black outline-none ring-0",
+            "inline-flex items-center justify-between h-10 px-3 text-sm bg-surface text-text-primary rounded-md",
+            "focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
             error
               ? "border-2 border-danger"
-              : "border border-gray-200 focus:border-2 focus:border-accent",
+              : "border border-border-muted",
           )}
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${id}-error` : undefined}
-          {...props}
         >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        {error && (
-          <p id={`${id}-error`} className="text-small text-danger">
-            {error}
-          </p>
-        )}
-      </div>
-    );
-  },
-);
+          <SelectPrimitive.Value placeholder={placeholder} />
+          <SelectPrimitive.Icon><ChevronDown size={14} className="text-text-tertiary" /></SelectPrimitive.Icon>
+        </SelectPrimitive.Trigger>
 
-Select.displayName = "Select";
+        <SelectPrimitive.Portal>
+          <SelectPrimitive.Content
+            className={clsx(
+              "z-50 min-w-(--radix-select-trigger-width) bg-surface border border-border-subtle rounded-lg shadow-lg",
+            )}
+            position="popper"
+            sideOffset={4}
+          >
+            <SelectPrimitive.Viewport className="p-1">
+              {options.map((option) => (
+                <SelectPrimitive.Item
+                  key={option.value}
+                  value={option.value}
+                  className={clsx(
+                    "flex items-center gap-2 px-3 py-2 text-sm rounded-md outline-none cursor-pointer",
+                    "data-highlighted:bg-surface-raised",
+                    "text-text-secondary",
+                  )}
+                >
+                  <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+                  <SelectPrimitive.ItemIndicator className="ml-auto">
+                    <Check size={14} strokeWidth={2} />
+                  </SelectPrimitive.ItemIndicator>
+                </SelectPrimitive.Item>
+              ))}
+            </SelectPrimitive.Viewport>
+          </SelectPrimitive.Content>
+        </SelectPrimitive.Portal>
+      </SelectPrimitive.Root>
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
 
 export { Select };
 export type { SelectProps, SelectOption };

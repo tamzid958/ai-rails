@@ -1,26 +1,14 @@
 "use client";
 
-type LegendItem = {
-  label: string;
-  color: string;
-};
+type LegendItem = { label: string; color: string };
 
-type SwissLegendProps = {
-  items: LegendItem[];
-};
-
-export function SwissLegend({ items }: SwissLegendProps) {
+export function SwissLegend({ items }: { items: LegendItem[] }) {
   return (
-    <div className="flex gap-3 mt-2 justify-center">
+    <div style={{ display: "flex", gap: 16, marginTop: 12, justifyContent: "center" }}>
       {items.map((item) => (
-        <div key={item.label} className="flex items-center gap-1">
-          <span
-            className="inline-block w-[12px] h-[12px]"
-            style={{ backgroundColor: item.color }}
-          />
-          <span className="text-label uppercase text-gray-500 tracking-[0.06em]">
-            {item.label}
-          </span>
+        <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: item.color }} />
+          <span style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>{item.label}</span>
         </div>
       ))}
     </div>
