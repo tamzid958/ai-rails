@@ -4,5 +4,279 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum MemberRole {
+  OWNER
+  LEAD
+  MEMBER
+}
+
+enum CaptureMethod {
+  GATEWAY
+  COMMIT_TAG
+  HEURISTIC
+}
+
+enum PrStatus {
+  OPENED
+  REVIEW_IN_PROGRESS
+  CHANGES_REQUESTED
+  APPROVED
+  MERGED
+  CLOSED
+  REVERTED
+}
+
+enum DataRichness {
+  NONE
+  HEURISTIC
+  TAGGED
+  FULL
+}
+
+// ─── Product (isolation boundary) ───────────────────────────────────────────
+
+model Product {
+  id                 String   @id @default(uuid())
+  name               String
+  slug               String   @unique
+  description        String?
+  allowedModels      String[] @default([])
+  defaultModel       String?
+  costAlertDaily     Float?
+  costAlertEngineer  Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  memberships    ProductMembership[]
+  repos          Repo[]
+  apiKeys        ApiKey[]
+  activities     AiActivity[]
+  prompts        PromptTemplate[]
+  prEvents       PrEvent[]
+  recommendations Recommendation[]
+  syncEvents     SyncEvent[]
+}
+
+// ─── Engineer (global identity) ─────────────────────────────────────────────
+
+model Engineer {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  gitUsername  String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships    ProductMembership[]
+  apiKeys        ApiKey[]
+  activities     AiActivity[]
+  prompts        PromptTemplate[]
+  recommendations Recommendation[]
+  syncEvents     SyncEvent[]
+}
+
+// ─── ProductMembership (join table) ─────────────────────────────────────────
+
+model ProductMembership {
+  id         String     @id @default(uuid())
+  productId  String
+  engineerId String
+  role       MemberRole @default(MEMBER)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  engineer Engineer @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, engineerId])
+  @@index([engineerId])
+}
+
+// ─── Repo ───────────────────────────────────────────────────────────────────
+
+model Repo {
+  id            String    @id @default(uuid())
+  productId     String
+  fullName      String    @unique
+  provider      String    @default("github")
+  webhookActive Boolean   @default(false)
+  lastEventAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+// ─── ApiKey (product-scoped) ────────────────────────────────────────────────
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  key        String    @unique
+  label      String
+  engineerId String
+  productId  String
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  engineer Engineer @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@index([engineerId])
+}
+
+// ─── AiActivity (unified activity log) ──────────────────────────────────────
+
+model AiActivity {
+  id               String        @id @default(uuid())
+  productId        String
+  engineerId       String
+  captureMethod    CaptureMethod
+  confidence       Float         @default(1.0)
+
+  tool             String?
+  provider         String?
+  model            String?
+  taskType         String?
+
+  inputTokens      Int?
+  outputTokens     Int?
+  totalTokens      Int?
+  estimatedCost    Float?
+
+  promptSnippet    String?
+  responseSnippet  String?
+
+  branchName       String?
+  commitSha        String?
+  repoFullName     String?
+
+  promptTemplateId String?
+  gatewayRequestId String?
+
+  metadata         Json?
+
+  createdAt        DateTime @default(now())
+
+  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  engineer       Engineer        @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+  promptTemplate PromptTemplate? @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
+
+  @@index([productId, engineerId, createdAt])
+  @@index([productId, captureMethod])
+  @@index([productId, engineerId, branchName])
+  @@index([productId, promptTemplateId])
+}
+
+// ─── PromptTemplate (product-scoped, self-referencing) ──────────────────────
+
+model PromptTemplate {
+  id         String  @id @default(uuid())
+  productId  String
+  taskType   String
+  name       String
+  content    String
+  version    Int     @default(1)
+  isBase     Boolean @default(true)
+  parentId   String?
+  engineerId String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  engineer Engineer? @relation(fields: [engineerId], references: [id], onDelete: SetNull)
+  parent   PromptTemplate?  @relation("PromptOverrides", fields: [parentId], references: [id], onDelete: SetNull)
+  children PromptTemplate[] @relation("PromptOverrides")
+
+  activities AiActivity[]
+
+  @@unique([productId, taskType, engineerId, isBase])
+  @@index([productId, taskType])
+}
+
+// ─── PrEvent (PR outcome tracking) ─────────────────────────────────────────
+
+model PrEvent {
+  id             String       @id @default(uuid())
+  productId      String
+  externalId     String       @unique
+  provider       String
+  repoFullName   String
+  prNumber       Int
+  branchName     String
+  title          String?
+  engineerId     String?
+  status         PrStatus     @default(OPENED)
+
+  reviewCycles   Int          @default(0)
+  linesAdded     Int?
+  linesRemoved   Int?
+  filesChanged   Int?
+
+  aiActivitiesCount  Int      @default(0)
+  aiToolsUsed        String[] @default([])
+  dataRichness       DataRichness @default(NONE)
+
+  openedAt       DateTime?
+  firstReviewAt  DateTime?
+  mergedAt       DateTime?
+  closedAt       DateTime?
+
+  metadata       Json?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, engineerId, branchName])
+  @@index([productId, status])
+  @@index([productId, dataRichness])
+}
+
+// ─── Recommendation ─────────────────────────────────────────────────────────
+
+model Recommendation {
+  id          String    @id @default(uuid())
+  productId   String
+  engineerId  String?
+  type        String
+  title       String
+  body        String
+  priority    Int       @default(0)
+  data        Json?
+  dismissedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  product  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  engineer Engineer? @relation(fields: [engineerId], references: [id], onDelete: SetNull)
+
+  @@index([productId, engineerId])
+}
+
+// ─── SyncEvent ──────────────────────────────────────────────────────────────
+
+model SyncEvent {
+  id             String   @id @default(uuid())
+  productId      String
+  engineerId     String
+  repoFullName   String
+  toolsGenerated String[] @default([])
+  backupsCreated Int      @default(0)
+  configHash     String?
+  createdAt      DateTime @default(now())
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  engineer Engineer @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
 }
