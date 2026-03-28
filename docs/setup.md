@@ -1,3 +1,8 @@
+---
+layout: default
+title: "Setup Guide"
+---
+
 # Setup Guide
 
 ## Prerequisites

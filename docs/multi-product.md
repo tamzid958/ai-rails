@@ -1,3 +1,8 @@
+---
+layout: default
+title: "Multi-Product Architecture"
+---
+
 # Multi-Product Architecture
 
 ## Overview

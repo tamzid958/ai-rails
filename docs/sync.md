@@ -1,3 +1,8 @@
+---
+layout: default
+title: "Config Sync Engine"
+---
+
 # Config Sync Engine
 
 ## Overview

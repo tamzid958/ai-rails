@@ -1,3 +1,8 @@
+---
+layout: default
+title: "Voluntary Commit Tagging"
+---
+
 # Voluntary Commit Tagging
 
 ## Overview

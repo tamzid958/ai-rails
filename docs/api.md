@@ -1,3 +1,8 @@
+---
+layout: default
+title: "API Reference"
+---
+
 # API Reference
 
 All endpoints require authentication via `Authorization: Bearer ar_k1_...` header. Every response is scoped to the product associated with the API key.

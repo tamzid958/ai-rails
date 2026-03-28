@@ -1,0 +1,12 @@
+theme: jekyll-theme-midnight
+title: AIRAILS
+description: AI Governance For Engineering Teams
+baseurl: /ai-rails
+
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: default
+

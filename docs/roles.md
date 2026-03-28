@@ -1,3 +1,8 @@
+---
+layout: default
+title: "Roles & Permissions"
+---
+
 # Roles & Permissions
 
 ## Role Hierarchy
