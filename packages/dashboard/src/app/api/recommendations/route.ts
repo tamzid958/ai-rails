@@ -1,0 +1,66 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { getEngineer } from "@/lib/auth";
+import { prisma } from "@airails/shared";
+
+export async function GET(request: NextRequest) {
+  const engineer = await getEngineer();
+  const { searchParams } = new URL(request.url);
+
+  const productId = searchParams.get("productId");
+  if (!productId) {
+    return NextResponse.json({ error: "Missing productId" }, { status: 400 });
+  }
+
+  const membership = await prisma.productMembership.findUnique({
+    where: { productId_engineerId: { productId, engineerId: engineer.id } },
+  });
+  if (!membership) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const typeFilter = searchParams.get("type");
+  const dismissed = searchParams.get("dismissed");
+  const engineerFilter = searchParams.get("engineerId");
+
+  const where: Record<string, unknown> = { productId };
+
+  if (engineerFilter) {
+    where.engineerId = engineerFilter;
+  } else {
+    // Default: show personal recs for the current engineer
+    where.engineerId = engineer.id;
+  }
+
+  if (typeFilter) {
+    where.type = typeFilter;
+  }
+
+  if (dismissed === "true") {
+    where.dismissedAt = { not: null };
+  } else {
+    where.dismissedAt = null;
+  }
+
+  const recommendations = await prisma.recommendation.findMany({
+    where,
+    include: {
+      engineer: { select: { name: true } },
+    },
+    orderBy: [{ priority: "desc" }, { createdAt: "desc" }],
+  });
+
+  return NextResponse.json(
+    recommendations.map((r) => ({
+      id: r.id,
+      type: r.type,
+      title: r.title,
+      body: r.body,
+      priority: r.priority,
+      data: r.data,
+      engineerId: r.engineerId,
+      engineerName: r.engineer?.name ?? null,
+      dismissedAt: r.dismissedAt?.toISOString() ?? null,
+      createdAt: r.createdAt.toISOString(),
+    })),
+  );
+}

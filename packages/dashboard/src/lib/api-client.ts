@@ -51,6 +51,7 @@ export type ActivityRow = {
   id: string;
   createdAt: string;
   captureMethod: "GATEWAY" | "COMMIT_TAG" | "HEURISTIC";
+  confidence: number;
   tool: string | null;
   branchName: string | null;
   dataRichness: "FULL" | "TAGGED" | "HEURISTIC" | "NONE";
@@ -340,6 +341,21 @@ export type ToolLeaderboardRow = {
   revisionRate: number;
   rejectionRate: number;
   sampleSize: number;
+};
+
+// ── Recommendation types ──
+
+export type RecommendationRow = {
+  id: string;
+  type: string;
+  title: string;
+  body: string;
+  priority: number;
+  data: Record<string, unknown> | null;
+  engineerId: string | null;
+  engineerName: string | null;
+  dismissedAt: string | null;
+  createdAt: string;
 };
 
 async function postJson<T>(url: string, body: unknown): Promise<T> {
@@ -692,6 +708,29 @@ export const api = {
   getToolLeaderboard(productId: string) {
     return fetchJson<ToolLeaderboardRow[]>(
       `/api/effectiveness/leaderboard?productId=${productId}`,
+    );
+  },
+
+  // ── Recommendation endpoints ──
+
+  getRecommendations(productId: string, engineerId?: string) {
+    const qs = new URLSearchParams({ productId });
+    if (engineerId) qs.set("engineerId", engineerId);
+    return fetchJson<RecommendationRow[]>(
+      `/api/recommendations?${qs.toString()}`,
+    );
+  },
+
+  getTeamRecommendations(productId: string) {
+    return fetchJson<RecommendationRow[]>(
+      `/api/recommendations/team?productId=${productId}`,
+    );
+  },
+
+  dismissRecommendation(id: string) {
+    return postJson<{ success: boolean }>(
+      `/api/recommendations/${id}/dismiss`,
+      {},
     );
   },
 };

@@ -3,6 +3,8 @@ import { prisma } from "@airails/shared";
 import type { CorrelateJob, HeuristicsJob, RecommendationsJob } from "../types.js";
 import { correlatePrToActivities } from "../correlation/matcher.js";
 import { recalculateProductScores } from "../correlation/scoring.js";
+import { analyzeCommit } from "../heuristics/analyzer.js";
+import { generateRecommendations } from "../recommendations/generator.js";
 
 const REDIS_URL = process.env["REDIS_URL"] ?? "redis://localhost:6379";
 
@@ -86,21 +88,45 @@ correlationWorker.on("failed", (job, err) => {
 export const heuristicsWorker = new Worker<HeuristicsJob>(
   "heuristics",
   async (job) => {
-    // Stub — full implementation in Phase 11
     console.log(
-      `[heuristics] Processing job ${job.id} for product ${job.data.productId}`,
+      `[heuristics] Analyzing commit ${job.data.commit.id} for product ${job.data.productId}`,
+    );
+
+    const result = await analyzeCommit(job.data);
+
+    if (result.recorded) {
+      console.log(
+        `[heuristics] Created HEURISTIC activity (confidence: ${result.combinedConfidence.toFixed(2)}, signals: ${result.signals.map((s) => s.signal).join(", ")})`,
+      );
+    } else if (result.signals.length > 0) {
+      console.log(
+        `[heuristics] Signals found but below threshold (confidence: ${result.combinedConfidence.toFixed(2)})`,
+      );
+    }
+  },
+  { connection },
+);
+
+heuristicsWorker.on("failed", (job, err) => {
+  console.error(`[heuristics] Job ${job?.id} failed:`, err.message);
+});
+
+export const recommendationsWorker = new Worker<RecommendationsJob>(
+  "recommendations",
+  async (job) => {
+    console.log(
+      `[recommendations] Generating recommendations for product ${job.data.productId}`,
+    );
+
+    const count = await generateRecommendations(job.data.productId);
+
+    console.log(
+      `[recommendations] Generated/updated ${count} recommendations for product ${job.data.productId}`,
     );
   },
   { connection },
 );
 
-export const recommendationsWorker = new Worker<RecommendationsJob>(
-  "recommendations",
-  async (job) => {
-    // Stub — full implementation in Phase 11
-    console.log(
-      `[recommendations] Processing job ${job.id} for product ${job.data.productId}`,
-    );
-  },
-  { connection },
-);
+recommendationsWorker.on("failed", (job, err) => {
+  console.error(`[recommendations] Job ${job?.id} failed:`, err.message);
+});

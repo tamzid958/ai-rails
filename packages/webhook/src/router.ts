@@ -131,6 +131,9 @@ async function handleGitLabPush(
         email: c.author.email,
       },
       timestamp: "",
+      added: [],
+      removed: [],
+      modified: [],
     })),
     repository: { full_name: payload.project.path_with_namespace },
   };

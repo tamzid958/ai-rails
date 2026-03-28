@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger } from "fastify";
 import { prisma, parseCommitTrailers } from "@airails/shared";
 import type { GitHubPushPayload, WebhookProduct } from "../types.js";
+import { heuristicsQueue } from "../jobs/queue.js";
 
 export async function handlePushEvent(
   payload: GitHubPushPayload,
@@ -12,7 +13,6 @@ export async function handlePushEvent(
   for (const commit of payload.commits) {
     const trailers = parseCommitTrailers(commit.message);
     const aiTool = trailers["AI-Assisted-By"];
-    if (!aiTool) continue;
 
     const gitUsername = commit.author.username;
     if (!gitUsername) continue;
@@ -37,18 +37,43 @@ export async function handlePushEvent(
       continue;
     }
 
-    await prisma.aiActivity.create({
-      data: {
+    if (aiTool) {
+      // Tagged commit — create COMMIT_TAG activity directly
+      await prisma.aiActivity.create({
+        data: {
+          productId: product.productId,
+          engineerId: engineer.id,
+          captureMethod: "COMMIT_TAG",
+          confidence: 1.0,
+          tool: aiTool,
+          taskType: trailers["AI-Task-Type"] ?? null,
+          repoFullName: payload.repository.full_name,
+          branchName,
+          commitSha: commit.id,
+          metadata: {
+            filesChanged:
+              commit.added.length +
+              commit.removed.length +
+              commit.modified.length,
+          },
+        },
+      });
+    } else {
+      // Untagged commit — queue for heuristic analysis
+      await heuristicsQueue.add("analyze-commit", {
         productId: product.productId,
         engineerId: engineer.id,
-        captureMethod: "COMMIT_TAG",
-        confidence: 1.0,
-        tool: aiTool,
-        taskType: trailers["AI-Task-Type"] ?? null,
         repoFullName: payload.repository.full_name,
         branchName,
-        commitSha: commit.id,
-      },
-    });
+        commit: {
+          id: commit.id,
+          message: commit.message,
+          timestamp: commit.timestamp,
+          added: commit.added,
+          removed: commit.removed,
+          modified: commit.modified,
+        },
+      });
+    }
   }
 }

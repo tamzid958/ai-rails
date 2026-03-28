@@ -23,6 +23,7 @@ import { PeriodSelector } from "@/components/engineer/period-selector";
 import { TaggingBanner } from "@/components/engineer/tagging-banner";
 import { SwissAreaChart } from "@/components/charts/swiss-line-chart";
 import { SwissHorizontalBar } from "@/components/charts/swiss-bar-chart";
+import { SuggestionsCard } from "@/components/recommendations/suggestions-card";
 
 const CAPTURE_BADGE_VARIANT = {
   GATEWAY: "accent",
@@ -105,6 +106,11 @@ export default function EngineerOverviewPage() {
         </div>
       ) : null}
 
+      {/* Suggestions */}
+      <div className="mb-3">
+        <SuggestionsCard />
+      </div>
+
       {/* Timeline + Tool Distribution */}
       <div className="grid grid-cols-12 gap-3 mb-3">
         <div className="col-span-8 border border-gray-200 p-3">
@@ -174,9 +180,22 @@ export default function EngineerOverviewPage() {
                   })}
                 </TableCell>
                 <TableCell>
-                  <Badge variant={CAPTURE_BADGE_VARIANT[a.captureMethod]}>
-                    {a.captureMethod}
-                  </Badge>
+                  <span
+                    title={
+                      a.captureMethod === "HEURISTIC"
+                        ? `Confidence: ${(a.confidence * 100).toFixed(0)}% — detected via code pattern analysis`
+                        : undefined
+                    }
+                  >
+                    <Badge variant={CAPTURE_BADGE_VARIANT[a.captureMethod]}>
+                      {a.captureMethod}
+                    </Badge>
+                    {a.captureMethod === "HEURISTIC" && (
+                      <Badge variant="warning" className="ml-1">
+                        EST
+                      </Badge>
+                    )}
+                  </span>
                 </TableCell>
                 <TableCell>{a.tool ?? "—"}</TableCell>
                 <TableCell mono>{a.branchName ?? "—"}</TableCell>
@@ -205,6 +224,12 @@ export default function EngineerOverviewPage() {
               Load more
             </Button>
           </div>
+        )}
+        {activities.some((a) => a.captureMethod === "HEURISTIC") && (
+          <p className="text-label text-gray-400 mt-2">
+            Includes estimated data — heuristic records are detected via code
+            pattern analysis and may not reflect confirmed AI usage.
+          </p>
         )}
       </div>
     </div>

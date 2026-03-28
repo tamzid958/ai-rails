@@ -20,6 +20,9 @@ export interface GitHubCommit {
   message: string;
   author: GitHubCommitAuthor;
   timestamp: string;
+  added: string[];
+  removed: string[];
+  modified: string[];
 }
 
 export interface GitHubPushPayload {
@@ -150,10 +153,21 @@ export interface CorrelateJob {
   engineerId: string;
 }
 
+export interface HeuristicsCommitData {
+  id: string;
+  message: string;
+  timestamp: string;
+  added: string[];
+  removed: string[];
+  modified: string[];
+}
+
 export interface HeuristicsJob {
   productId: string;
-  commitId: string;
   engineerId: string;
+  repoFullName: string;
+  branchName: string;
+  commit: HeuristicsCommitData;
 }
 
 export interface RecommendationsJob {

@@ -9,6 +9,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PeriodSelector } from "@/components/engineer/period-selector";
 import { SwissStackedAreaChart, CHART_COLORS } from "@/components/charts/swiss-line-chart";
+import { InsightsCard } from "@/components/recommendations/insights-card";
 
 const COVERAGE_COLORS = {
   FULL: "#0047FF",
@@ -72,6 +73,11 @@ export default function TeamOverviewPage() {
           />
         </div>
       ) : null}
+
+      {/* Team Insights */}
+      <div className="mb-3">
+        <InsightsCard />
+      </div>
 
       <div className="border border-gray-200 p-3 mb-3">
         <h3 className="text-label uppercase text-gray-500 tracking-[0.06em] mb-2">
