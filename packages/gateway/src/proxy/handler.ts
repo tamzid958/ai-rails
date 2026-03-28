@@ -1,0 +1,134 @@
+import type { FastifyRequest, FastifyReply } from "fastify";
+import { enforceModelAllowlist } from "../enrichment/model-guard.js";
+import { injectPrompt } from "../enrichment/prompt.js";
+import { logGatewayActivity } from "../logging/logger.js";
+import { StreamCollector } from "./stream-collector.js";
+import { LITELLM_URL, LITELLM_MASTER_KEY } from "./config.js";
+import type { ChatCompletionRequest, ChatCompletionResponse } from "./types.js";
+
+async function forwardToLiteLLM(
+  path: string,
+  body: unknown,
+): Promise<Response> {
+  try {
+    return await fetch(`${LITELLM_URL}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(LITELLM_MASTER_KEY
+          ? { Authorization: `Bearer ${LITELLM_MASTER_KEY}` }
+          : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw { statusCode: 502, message: "LiteLLM service unavailable" };
+  }
+}
+
+export async function handleChatCompletions(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<void> {
+  const context = request.productContext;
+  const rawBody = request.body as ChatCompletionRequest;
+
+  await enforceModelAllowlist(context.productId, rawBody.model);
+
+  const { body, templateId, isOverride } = await injectPrompt(
+    rawBody,
+    context,
+    request.headers,
+  );
+
+  if (body.stream) {
+    return handleStream(request, reply, body, templateId, isOverride);
+  }
+
+  const startTime = Date.now();
+  const response = await forwardToLiteLLM("/v1/chat/completions", body);
+  const data = (await response.json()) as ChatCompletionResponse;
+  const latencyMs = Date.now() - startTime;
+
+  // Non-blocking logging
+  logGatewayActivity({
+    context,
+    request: body,
+    response: data,
+    latencyMs,
+    headers: request.headers,
+    templateId,
+    isOverride,
+  }).catch(() => {});
+
+  reply.status(response.status).send(data);
+}
+
+async function handleStream(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  body: ChatCompletionRequest,
+  templateId: string | null,
+  isOverride: boolean,
+): Promise<void> {
+  const context = request.productContext;
+  const startTime = Date.now();
+
+  const response = await forwardToLiteLLM("/v1/chat/completions", {
+    ...body,
+    stream: true,
+  });
+
+  if (!response.ok || !response.body) {
+    const errData = await response.text();
+    reply.status(response.status).send(errData);
+    return;
+  }
+
+  reply.raw.writeHead(200, {
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
+
+  const collector = new StreamCollector();
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      collector.push(chunk);
+      reply.raw.write(chunk);
+    }
+  } catch {
+    // Client disconnected or stream error
+  } finally {
+    reply.raw.end();
+  }
+
+  const latencyMs = Date.now() - startTime;
+
+  logGatewayActivity({
+    context,
+    request: body,
+    response: collector.toSummary(),
+    latencyMs,
+    isStreaming: true,
+    headers: request.headers,
+    templateId,
+    isOverride,
+  }).catch(() => {});
+}
+
+export async function handleEmbeddings(
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<void> {
+  const body = request.body as Record<string, unknown>;
+  const response = await forwardToLiteLLM("/v1/embeddings", body);
+  const data = await response.json();
+  reply.status(response.status).send(data);
+}
