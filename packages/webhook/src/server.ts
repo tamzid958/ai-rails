@@ -4,6 +4,7 @@ import sensible from "@fastify/sensible";
 import type { HealthResponse } from "@airails/shared";
 import { githubHandler } from "./providers/github.js";
 import { gitlabHandler } from "./providers/gitlab.js";
+import { scheduleNightlyJobs } from "./jobs/scheduler.js";
 
 // Start BullMQ workers (side-effect import)
 import "./jobs/workers.js";
@@ -27,3 +28,8 @@ app.post("/webhooks/gitlab", gitlabHandler);
 
 const port = Number(process.env["WEBHOOK_PORT"]) || DEFAULT_PORT;
 await app.listen({ port, host: HOST });
+
+// Schedule nightly recalculation jobs after server is listening
+scheduleNightlyJobs().catch((err) => {
+  console.error("[scheduler] Failed to schedule nightly jobs:", err);
+});

@@ -161,6 +161,7 @@ model AiActivity {
 
   promptTemplateId String?
   gatewayRequestId String?
+  prEventId        String?
 
   metadata         Json?
 
@@ -169,11 +170,13 @@ model AiActivity {
   product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   engineer       Engineer        @relation(fields: [engineerId], references: [id], onDelete: Cascade)
   promptTemplate PromptTemplate? @relation(fields: [promptTemplateId], references: [id], onDelete: SetNull)
+  prEvent        PrEvent?        @relation(fields: [prEventId], references: [id], onDelete: SetNull)
 
   @@index([productId, engineerId, createdAt])
   @@index([productId, captureMethod])
   @@index([productId, engineerId, branchName])
   @@index([productId, promptTemplateId])
+  @@index([prEventId])
 }
 
 // ─── PromptTemplate (product-scoped, self-referencing) ──────────────────────
@@ -185,11 +188,15 @@ model PromptTemplate {
   name       String
   content    String
   version    Int     @default(1)
-  isBase     Boolean @default(true)
-  parentId   String?
-  engineerId String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  isBase         Boolean @default(true)
+  parentId       String?
+  engineerId     String?
+  usageCount     Int     @default(0)
+  acceptanceRate Float?
+  revisionRate   Float?
+  rejectionRate  Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   product  Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   engineer Engineer? @relation(fields: [engineerId], references: [id], onDelete: SetNull)
@@ -222,6 +229,7 @@ model PrEvent {
   filesChanged   Int?
 
   aiActivitiesCount  Int      @default(0)
+  totalTokensUsed    Int      @default(0)
   aiToolsUsed        String[] @default([])
   dataRichness       DataRichness @default(NONE)
 
@@ -235,7 +243,8 @@ model PrEvent {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  activities AiActivity[]
 
   @@index([productId, engineerId, branchName])
   @@index([productId, status])

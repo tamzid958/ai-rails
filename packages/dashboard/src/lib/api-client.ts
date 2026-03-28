@@ -307,6 +307,41 @@ export type WebhookRepoStatus = {
   lastEventAt: string | null;
 };
 
+// ── Effectiveness (product-level) types ──
+
+export type ProductEffectivenessScores = {
+  acceptanceRate: number;
+  revisionRate: number;
+  rejectionRate: number;
+  sampleSize: number;
+};
+
+export type ProductEffectivenessResponse = {
+  productId: string;
+  productSlug: string;
+  dimension: string;
+  scores: ProductEffectivenessScores;
+  trend: { week: string; acceptanceRate: number }[];
+};
+
+export type PromptComparisonRow = {
+  promptTemplateId: string;
+  name: string;
+  taskType: string;
+  acceptanceRate: number;
+  revisionRate: number;
+  rejectionRate: number;
+  sampleSize: number;
+};
+
+export type ToolLeaderboardRow = {
+  tool: string;
+  acceptanceRate: number;
+  revisionRate: number;
+  rejectionRate: number;
+  sampleSize: number;
+};
+
 async function postJson<T>(url: string, body: unknown): Promise<T> {
   const res = await fetch(url, {
     method: "POST",
@@ -634,6 +669,30 @@ export const api = {
       webhookUrl: string;
       repos: WebhookRepoStatus[];
     }>(`/api/settings/webhooks?productId=${productId}`);
+  },
+
+  // ── Product-level effectiveness endpoints ──
+
+  getProductEffectiveness(
+    productId: string,
+    params?: { dimension?: string; value?: string; start?: string; end?: string },
+  ) {
+    const qs = new URLSearchParams({ productId, ...params });
+    return fetchJson<ProductEffectivenessResponse>(
+      `/api/effectiveness?${qs.toString()}`,
+    );
+  },
+
+  getPromptComparison(productId: string) {
+    return fetchJson<PromptComparisonRow[]>(
+      `/api/effectiveness/comparison?productId=${productId}`,
+    );
+  },
+
+  getToolLeaderboard(productId: string) {
+    return fetchJson<ToolLeaderboardRow[]>(
+      `/api/effectiveness/leaderboard?productId=${productId}`,
+    );
   },
 };
 
