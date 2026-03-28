@@ -173,4 +173,72 @@ export function SwissAreaChart({
   );
 }
 
+type StackedSeries = {
+  dataKey: string;
+  label: string;
+  color: string;
+};
+
+type SwissStackedAreaChartProps = {
+  data: Record<string, unknown>[];
+  xKey: string;
+  series: StackedSeries[];
+  height?: number;
+  tooltipFormatter?: (value: number, name: string) => string;
+};
+
+export function SwissStackedAreaChart({
+  data,
+  xKey,
+  series,
+  height = 300,
+  tooltipFormatter,
+}: SwissStackedAreaChartProps) {
+  return (
+    <div>
+      <ResponsiveContainer width="100%" height={height}>
+        <AreaChart data={data}>
+          <CartesianGrid
+            horizontal
+            vertical={false}
+            stroke="#ececec"
+            strokeWidth={1}
+          />
+          <XAxis
+            dataKey={xKey}
+            tick={AXIS_STYLE}
+            axisLine={{ stroke: "#ececec", strokeWidth: 1 }}
+            tickLine={false}
+          />
+          <YAxis tick={AXIS_STYLE} axisLine={false} tickLine={false} />
+          <Tooltip
+            content={
+              (<SwissTooltip formatter={tooltipFormatter} />) as ReactElement
+            }
+          />
+          {series.map((s) => (
+            <Area
+              key={s.dataKey}
+              type="monotone"
+              dataKey={s.dataKey}
+              stackId="1"
+              stroke={s.color}
+              strokeWidth={1.5}
+              fill={s.color}
+              fillOpacity={0.15}
+              name={s.label}
+            />
+          ))}
+        </AreaChart>
+      </ResponsiveContainer>
+      <SwissLegend
+        items={series.map((s) => ({
+          label: s.label,
+          color: s.color,
+        }))}
+      />
+    </div>
+  );
+}
+
 export { CHART_COLORS };
