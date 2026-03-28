@@ -1,21 +1,4 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER:-airails}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
-      - POSTGRES_DB=${POSTGRES_DB:-airails}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-airails}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   redis:
     image: redis:8-alpine
     ports:
@@ -57,13 +40,11 @@ services:
     environment:
       - AIRAILS_PORT=8080
       - AIRAILS_SECRET=${AIRAILS_SECRET:-change-this-to-a-random-secret}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://airails:changeme@postgres:5432/airails}
+      - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - LITELLM_URL=http://litellm:4000
       - LOG_LEVEL=${LOG_LEVEL:-info}
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
       litellm:
@@ -84,15 +65,12 @@ services:
     environment:
       - NEXT_PUBLIC_GATEWAY_URL=${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8080}
       - NEXT_PUBLIC_DASHBOARD_URL=${NEXT_PUBLIC_DASHBOARD_URL:-http://localhost:3000}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://airails:changeme@postgres:5432/airails}
+      - DATABASE_URL=${DATABASE_URL}
       - AUTH_SECRET=${AUTH_SECRET:-change-this-to-a-random-secret}
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
       - GITLAB_CLIENT_ID=${GITLAB_CLIENT_ID:-}
       - GITLAB_CLIENT_SECRET=${GITLAB_CLIENT_SECRET:-}
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "node -e 'fetch(\"http://localhost:3000/\").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))'"]
       interval: 10s
@@ -109,12 +87,10 @@ services:
     environment:
       - WEBHOOK_PORT=8081
       - AIRAILS_WEBHOOK_SECRET=${AIRAILS_WEBHOOK_SECRET:-change-this}
-      - DATABASE_URL=${DATABASE_URL:-postgresql://airails:changeme@postgres:5432/airails}
+      - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - LOG_LEVEL=${LOG_LEVEL:-info}
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -125,5 +101,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
   redis_data:

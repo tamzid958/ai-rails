@@ -2,10 +2,12 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
 import type { HealthResponse } from "@airails/shared";
-import { Unauthorized, Forbidden, NotFound } from "@airails/shared";
+import { Unauthorized, Forbidden, NotFound, prisma } from "@airails/shared";
 
 import "./auth/types.js";
 import { authenticateHook } from "./auth/authenticate.js";
+import { registerRateLimiting } from "./middleware/rate-limit.js";
+import { registerSecurityHeaders } from "./middleware/security-headers.js";
 import { proxyRoutes } from "./proxy/routes.js";
 import { productRoutes } from "./routes/products.js";
 import { memberRoutes } from "./routes/members.js";
@@ -21,10 +23,19 @@ import { otherRoutes } from "./routes/other.js";
 const DEFAULT_PORT = 8080;
 const HOST = "0.0.0.0";
 
-const app = Fastify({ logger: true });
+const app = Fastify({
+  logger: {
+    level: process.env["LOG_LEVEL"] ?? "info",
+    formatters: {
+      level: (label: string) => ({ level: label }),
+    },
+  },
+});
 
 await app.register(cors);
 await app.register(sensible);
+await registerRateLimiting(app);
+await registerSecurityHeaders(app);
 
 // Decorate request with productContext placeholder
 app.decorateRequest("productContext", null as never);
@@ -92,3 +103,14 @@ await app.register(otherRoutes, { prefix: "/api" });
 
 const port = Number(process.env["AIRAILS_PORT"]) || DEFAULT_PORT;
 await app.listen({ port, host: HOST });
+
+// Graceful shutdown
+async function shutdown(signal: string) {
+  app.log.info(`Received ${signal}, shutting down gracefully`);
+  await app.close();
+  await prisma.$disconnect();
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

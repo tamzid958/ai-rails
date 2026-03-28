@@ -5,6 +5,7 @@ import { Unauthorized, Forbidden, NotFound } from "@airails/shared";
 
 import "../../auth/types.js";
 import { authenticateHook } from "../../auth/authenticate.js";
+import { registerSecurityHeaders } from "../../middleware/security-headers.js";
 import { proxyRoutes } from "../../proxy/routes.js";
 import { productRoutes } from "../../routes/products.js";
 import { memberRoutes } from "../../routes/members.js";
@@ -22,6 +23,7 @@ export async function createTestApp() {
 
   await app.register(cors);
   await app.register(sensible);
+  await registerSecurityHeaders(app);
 
   app.decorateRequest("productContext", null as never);
   app.addHook("onRequest", authenticateHook);

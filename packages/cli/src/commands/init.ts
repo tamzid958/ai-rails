@@ -1,5 +1,6 @@
 import { Command } from "commander";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { createInterface } from "node:readline/promises";
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { stringify } from "yaml";
 import type { AirailsConfig } from "../utils/config.js";
@@ -7,7 +8,7 @@ import { getConfigDir } from "../utils/config.js";
 import { getRepoFullName } from "../utils/git.js";
 import { success, warn, info, spinner } from "../utils/ui.js";
 import { GatewayClient } from "../utils/api.js";
-import { getApiKey } from "../utils/credentials.js";
+import { slugify } from "@airails/shared";
 
 const STARTER_TEMPLATES: Record<string, string> = {
   "code-review": `# Code Review Prompt
@@ -45,6 +46,44 @@ Generate a concise commit message for the following changes:
 `,
 };
 
+async function prompt(question: string, defaultValue?: string): Promise<string> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const suffix = defaultValue ? ` (${defaultValue})` : "";
+  const answer = await rl.question(`${question}${suffix}: `);
+  rl.close();
+  return answer.trim() || defaultValue || "";
+}
+
+function scaffoldProject(configDir: string, slug: string, gatewayUrl: string): void {
+  mkdirSync(configDir, { recursive: true });
+  mkdirSync(join(configDir, "prompts"), { recursive: true });
+  mkdirSync(join(configDir, "overrides"), { recursive: true });
+  mkdirSync(join(configDir, ".backups"), { recursive: true });
+
+  const config: AirailsConfig = {
+    product: { slug },
+    gateway: { url: gatewayUrl },
+    sync: { tools: ["claude", "cursor", "copilot"] },
+  };
+  writeFileSync(join(configDir, "config.yml"), stringify(config));
+
+  const promptsDir = join(configDir, "prompts");
+  for (const [name, content] of Object.entries(STARTER_TEMPLATES)) {
+    writeFileSync(join(promptsDir, `${name}.md`), content);
+  }
+
+  const gitignorePath = ".gitignore";
+  const backupsEntry = ".airails/.backups/";
+  if (existsSync(gitignorePath)) {
+    const existing = readFileSync(gitignorePath, "utf-8");
+    if (!existing.includes(backupsEntry)) {
+      writeFileSync(gitignorePath, `${existing.trimEnd()}\n${backupsEntry}\n`);
+    }
+  } else {
+    writeFileSync(gitignorePath, `${backupsEntry}\n`);
+  }
+}
+
 export const initCommand = new Command("init")
   .description("Initialize AIRails in the current repository")
   .option("--product <slug>", "Product slug to link")
@@ -63,70 +102,70 @@ export const initCommand = new Command("init")
       return;
     }
 
-    const slug = options.product;
+    let slug = options.product;
+
+    // Interactive onboarding when no --product flag provided
     if (!slug) {
-      throw new Error(
-        "Product slug required. Use `airails init --product <slug>`",
-      );
-    }
+      console.log("\nWelcome to AIRails!\n");
 
-    // Scaffold directories
-    mkdirSync(configDir, { recursive: true });
-    mkdirSync(join(configDir, "prompts"), { recursive: true });
-    mkdirSync(join(configDir, "overrides"), { recursive: true });
-    mkdirSync(join(configDir, ".backups"), { recursive: true });
-
-    // Write config
-    const config: AirailsConfig = {
-      product: { slug },
-      gateway: { url: options.gateway },
-      sync: { tools: ["claude", "cursor", "copilot"] },
-    };
-    writeFileSync(join(configDir, "config.yml"), stringify(config));
-
-    // Write starter prompt templates
-    const promptsDir = join(configDir, "prompts");
-    for (const [name, content] of Object.entries(STARTER_TEMPLATES)) {
-      writeFileSync(join(promptsDir, `${name}.md`), content);
-    }
-
-    // Add .backups to .gitignore
-    const gitignorePath = ".gitignore";
-    const backupsEntry = ".airails/.backups/";
-    if (existsSync(gitignorePath)) {
-      const existing = await import("node:fs").then((fs) =>
-        fs.readFileSync(gitignorePath, "utf-8"),
-      );
-      if (!existing.includes(backupsEntry)) {
-        writeFileSync(gitignorePath, `${existing.trimEnd()}\n${backupsEntry}\n`);
+      const name = await prompt("Product name");
+      if (!name) {
+        throw new Error("Product name is required");
       }
-    } else {
-      writeFileSync(gitignorePath, `${backupsEntry}\n`);
+
+      const autoSlug = slugify(name);
+      slug = await prompt("Slug", autoSlug);
+
+      // Try to create the product via the gateway
+      const apiKey = process.env["AIRAILS_API_KEY"] ?? process.env["AIRAILS_BOOTSTRAP_KEY"];
+      if (apiKey) {
+        try {
+          const client = new GatewayClient(options.gateway, apiKey);
+          const spin = spinner(`Creating product "${name}"...`);
+          spin.start();
+          await client.post("/api/products", { name, slug });
+          spin.succeed(`Product "${name}" created`);
+          success("You are the OWNER");
+        } catch (err) {
+          warn(`Could not create product via API: ${err instanceof Error ? err.message : String(err)}`);
+          info("Create it manually in the dashboard or via the API.");
+        }
+      } else {
+        info("No API key found. Create the product via the dashboard.");
+        info("Set AIRAILS_API_KEY or AIRAILS_BOOTSTRAP_KEY to auto-create.");
+      }
     }
 
-    success(`Initialized .airails/ for product "${slug}"`);
+    // Scaffold local config
+    scaffoldProject(configDir, slug, options.gateway);
+    success(`Created .airails/ for product "${slug}"`);
+    success("Created starter prompt templates");
 
-    // Try to link repo to product via API
+    // Auto-detect and link repo
     const repoFullName = getRepoFullName();
     if (repoFullName) {
-      try {
-        const apiKey = getApiKey();
-        const client = new GatewayClient(options.gateway, apiKey);
-        const spin = spinner(`Linking repo ${repoFullName} to ${slug}...`);
-        spin.start();
-        await client.post(`/api/products/${slug}/repos`, {
-          fullName: repoFullName,
-        });
-        spin.succeed(`Linked repo ${repoFullName} to ${slug}`);
-      } catch {
-        warn(
-          `Could not link repo to product. Run \`airails repos add ${repoFullName}\` later.`,
-        );
+      console.log(`\nRepository: ${repoFullName} (auto-detected from git remote)`);
+      const apiKey = process.env["AIRAILS_API_KEY"] ?? process.env["AIRAILS_BOOTSTRAP_KEY"];
+      if (apiKey) {
+        try {
+          const client = new GatewayClient(options.gateway, apiKey);
+          const spin = spinner(`Linking ${repoFullName} to ${slug}...`);
+          spin.start();
+          await client.post(`/api/products/${slug}/repos`, {
+            fullName: repoFullName,
+          });
+          spin.succeed(`Linked ${repoFullName} to ${slug}`);
+        } catch {
+          warn(
+            `Could not link repo. Run \`airails repos add ${repoFullName}\` later.`,
+          );
+        }
       }
     }
 
+    console.log("");
     info("Next steps:");
-    info("  1. Run `airails sync` to generate native tool configs");
-    info("  2. Run `airails hooks install` to auto-sync on commit");
-    info("  3. Run `airails doctor` to validate setup");
+    info('  1. Run `airails keys create --label "Cursor"` to get an API key');
+    info("  2. Run `airails sync` to generate native tool configs");
+    info("  3. Run `airails hooks install` to auto-sync on commit");
   });

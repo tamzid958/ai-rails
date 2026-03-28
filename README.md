@@ -108,8 +108,32 @@ airails/
 └── docker-compose.yml
 ```
 
+## Multi-Product Isolation
+
+AIRails uses **products** as the top-level isolation boundary. Each product represents a team, project, or business unit. A single instance serves many products with complete data separation.
+
+- API keys are product-scoped — a key for Product A cannot access Product B
+- Every database query includes `WHERE productId = ...`
+- Webhooks route to the correct product via repository ownership
+- Role-based access (OWNER/LEAD/MEMBER) is enforced per product
+
+See [docs/multi-product.md](docs/multi-product.md) for details.
+
+## Documentation
+
+| Guide | Description |
+|-------|-------------|
+| [Setup](docs/setup.md) | Installation and first product |
+| [Configuration](docs/configuration.md) | `.airails/config.yml` reference |
+| [Multi-Product](docs/multi-product.md) | Product isolation model |
+| [Roles](docs/roles.md) | OWNER/LEAD/MEMBER permissions |
+| [Config Sync](docs/sync.md) | Sync engine documentation |
+| [Commit Tagging](docs/tagging.md) | Voluntary AI usage tagging |
+| [API Reference](docs/api.md) | All endpoints |
+| [Contributing](docs/contributing.md) | Development setup & PR guidelines |
+
 ---
 
 ## License
 
-Private — not yet licensed for distribution.
+[MIT](LICENSE)
