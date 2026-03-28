@@ -18,7 +18,8 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npx prisma generate --schema prisma/schema.prisma
-      - run: npx turbo lint typecheck test:unit build
+      - run: npx turbo lint typecheck test:unit -- --coverage
+      - run: npx turbo build
 
   test-integration:
     name: Integration Tests
