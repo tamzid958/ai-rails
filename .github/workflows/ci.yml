@@ -4,33 +4,23 @@ on: [push, pull_request]
 
 env:
   AIRAILS_SECRET: ci-test-secret
-  DATABASE_URL: postgresql://airails:test@localhost:5432/airails_test
 
 jobs:
-  lint-and-type:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: npx turbo lint
-      - run: npx turbo typecheck
-
-  test-unit:
+  check:
+    name: Lint, Type-check, Unit Tests & Build
     runs-on: ubuntu-latest
     env:
-      AIRAILS_SECRET: ci-test-secret
+      DATABASE_URL: postgresql://fake:fake@localhost:5432/fake
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm ci
-      - run: npx turbo test:unit
+      - run: npx turbo lint typecheck test:unit build
 
   test-integration:
+    name: Integration Tests
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -56,7 +46,6 @@ jobs:
     env:
       DATABASE_URL: postgresql://airails:test@localhost:5432/airails_test
       REDIS_URL: redis://localhost:6379
-      AIRAILS_SECRET: ci-test-secret
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -65,15 +54,3 @@ jobs:
       - run: npm ci
       - run: npx prisma migrate deploy
       - run: npx turbo test:integration
-
-  build:
-    runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: postgresql://fake:fake@localhost:5432/fake
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm ci
-      - run: npx turbo build
