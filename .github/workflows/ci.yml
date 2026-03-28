@@ -52,5 +52,6 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      - run: npx prisma generate --schema prisma/schema.prisma
       - run: npx prisma migrate deploy
       - run: npx turbo test:integration
