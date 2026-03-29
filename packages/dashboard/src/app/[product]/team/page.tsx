@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useProduct } from "@/lib/product-context";
 import { api, type Period } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartCard } from "@/components/ui/chart-card";
 import { PeriodSelector } from "@/components/engineer/period-selector";
 import { SwissStackedAreaChart, CHART_COLORS } from "@/components/charts/swiss-line-chart";
 import { InsightsCard } from "@/components/recommendations/insights-card";
+import { RefreshCw } from "lucide-react";
 
 const COVERAGE_COLORS = {
   FULL: "var(--color-chart-1)",
@@ -21,7 +23,13 @@ const COVERAGE_COLORS = {
 
 export default function TeamOverviewPage() {
   const { product } = useProduct();
+  const queryClient = useQueryClient();
   const [period, setPeriod] = useState<Period>("30d");
+
+  const regenMutation = useMutation({
+    mutationFn: () => api.triggerJob(product.id, "generate-recommendations"),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-recommendations"] }),
+  });
 
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ["team-overview", product.id, period],
@@ -40,13 +48,17 @@ export default function TeamOverviewPage() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <PageHeader title="Team Overview" className="mb-0 pb-0" />
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="secondary" onClick={() => regenMutation.mutate()} loading={regenMutation.isPending}>
+            <RefreshCw size={12} strokeWidth={1.5} /> Regenerate Insights
+          </Button>
         <div className="mt-3 sm:mt-0">
           <PeriodSelector value={period} onChange={setPeriod} />
         </div>
       </div>
-
+    </div>
       {overviewLoading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
@@ -111,5 +123,6 @@ export default function TeamOverviewPage() {
         )}
       </ChartCard>
     </div>
+  
   );
 }

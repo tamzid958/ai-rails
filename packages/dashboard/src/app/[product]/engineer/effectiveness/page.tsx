@@ -1,18 +1,30 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useProduct } from "@/lib/product-context";
 import { api } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartCard } from "@/components/ui/chart-card";
 import { SwissLineChart } from "@/components/charts/swiss-line-chart";
 import { SwissGroupedBar, SwissComparisonBar } from "@/components/charts/swiss-bar-chart";
-import { Target } from "lucide-react";
+import { Target, RefreshCw } from "lucide-react";
 
 export default function EffectivenessPage() {
   const { product, engineer } = useProduct();
+  const queryClient = useQueryClient();
+
+  const recalcMutation = useMutation({
+    mutationFn: () => api.triggerJob(product.id, "recalculate-effectiveness"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["engineer-effectiveness"] });
+      queryClient.invalidateQueries({ queryKey: ["engineer-effectiveness-trend"] });
+      queryClient.invalidateQueries({ queryKey: ["engineer-tool-effectiveness"] });
+      queryClient.invalidateQueries({ queryKey: ["engineer-team-comparison"] });
+    },
+  });
 
   const { data: effectiveness, isLoading: effectivenessLoading } = useQuery({
     queryKey: ["engineer-effectiveness", product.id, engineer.id],
@@ -40,7 +52,7 @@ export default function EffectivenessPage() {
   if (!effectivenessLoading && effectiveness && !effectiveness.sufficient) {
     return (
       <div>
-        <PageHeader title="Effectiveness" />
+        <PageHeader title="Effectiveness" actions={<Button size="sm" variant="secondary" onClick={() => recalcMutation.mutate()} loading={recalcMutation.isPending}><RefreshCw size={12} strokeWidth={1.5} /> Recalculate</Button>} />
         <div className="bg-surface-raised border border-border-subtle rounded-lg p-8 text-center">
           <Target size={28} strokeWidth={1} className="text-text-muted mx-auto mb-4" />
           <h3 className="text-base font-medium text-text-primary">Not enough data yet</h3>
@@ -58,7 +70,7 @@ export default function EffectivenessPage() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <PageHeader title="Effectiveness" />
+      <PageHeader title="Effectiveness" actions={<Button size="sm" variant="secondary" onClick={() => recalcMutation.mutate()} loading={recalcMutation.isPending}><RefreshCw size={12} strokeWidth={1.5} /> Recalculate</Button>} />
 
       {effectivenessLoading ? (
         <div className="grid grid-cols-3 gap-4">

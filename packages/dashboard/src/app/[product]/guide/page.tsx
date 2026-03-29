@@ -250,7 +250,8 @@ airails tag --tool copilot --branch feature/auth`}</Code>
           <ListItem title="Overview">Team-wide trends, data coverage breakdown, AI-powered insights with pagination.</ListItem>
           <ListItem title="Engineers">Compare individuals — activity, acceptance rate, cost, tools used. Sortable columns.</ListItem>
           <ListItem title="Costs">Spending by engineer, model, and task type. Threshold alerts flag overspending.</ListItem>
-          <ListItem title="Drift">Configuration drift detection across the team.</ListItem>
+          <ListItem title="Drift">Configuration drift detection — model violations, stale overrides, capture gaps. Scored per engineer.</ListItem>
+          <ListItem title="Audit">Immutable changelog of every prompt template change with before/after diffs and acceptance rate correlation.</ListItem>
           <ListItem title="Outcomes">PR outcomes correlated with AI usage. Filter by status and data richness.</ListItem>
           <ListItem title="Prompts">Prompt registry — review overrides, promote top performers to base.</ListItem>
 
@@ -389,34 +390,43 @@ Do not suggest cosmetic changes or add unnecessary comments.`}</Code>
 
           {/* ─── Drift ─── */}
           <H2 id="drift">Config Drift</H2>
-          <P>Drift happens when engineers&apos; setups diverge from the team standard. AIRAILS detects this automatically.</P>
+          <P>Drift happens when engineers&apos; setups diverge from the team standard. AIRAILS evaluates three dimensions per engineer over a <S>rolling 30-day window</S> and assigns a composite score.</P>
 
-          <H3>What Gets Tracked</H3>
+          <H3>Three Dimensions</H3>
 
           <div style={{ margin: "16px 0", display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ padding: "18px 20px", background: "var(--color-surface-raised)", border: "1px solid var(--color-border-subtle)", borderRadius: 8 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 6 }}>Model Drift</p>
-              <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.65 }}>Engineer is using a model not in the allowlist, or an outdated version. Example: using <Mono>gpt-3.5-turbo</Mono> when the team standardized on <Mono>gpt-4o</Mono>.</p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>Model Drift</p>
+                <Pill color="#7f1d1d">+3 per violation</Pill>
+              </div>
+              <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.65 }}>Engineer used a model not in the product&apos;s allowlist. Example: using <Mono>gpt-3.5-turbo</Mono> when the team allows only <Mono>gpt-4o</Mono> and <Mono>claude-sonnet-4-5</Mono>. Each non-allowed model adds 3 points. Skipped if the allowlist is empty (all models permitted).</p>
             </div>
             <div style={{ padding: "18px 20px", background: "var(--color-surface-raised)", border: "1px solid var(--color-border-subtle)", borderRadius: 8 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 6 }}>Template Drift</p>
-              <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.65 }}>An override hasn&apos;t been updated after a base template promotion, or uses an archived version.</p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>Template Drift</p>
+                <Pill color="#78350f">+2 per stale override</Pill>
+              </div>
+              <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.65 }}>An override is <S>stale</S> when the base template was updated after the override was last edited. An override is <S>orphaned</S> when its base template no longer exists. Each issue adds 2 points.</p>
             </div>
             <div style={{ padding: "18px 20px", background: "var(--color-surface-raised)", border: "1px solid var(--color-border-subtle)", borderRadius: 8 }}>
-              <p style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 6 }}>Tool Sync</p>
-              <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.65 }}>Some engineers haven&apos;t connected to the gateway while others have. Inconsistent data coverage.</p>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>Tool Sync</p>
+                <Pill color="#78350f">+1 if partial</Pill>
+              </div>
+              <p style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.65 }}>Checks capture method diversity. If an engineer has commit tagging but no gateway data, they&apos;re missing cost and token metrics (+1 point). If they have neither, it&apos;s noted as &quot;no recent activity&quot; but not scored.</p>
             </div>
           </div>
 
-          <H3>Drift Levels</H3>
-          <P>Check <S>Team → Drift</S> for a per-engineer breakdown.</P>
+          <H3>Drift Scoring</H3>
+          <P>The composite score maps to a severity level. Check <S>Team → Drift</S> for a per-engineer breakdown, sorted worst-first.</P>
 
           <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 8 }}>
             {([
-              ["NONE", "Fully aligned", "#064e3b"],
-              ["LOW", "Minor — one outdated override", "#78350f"],
-              ["MEDIUM", "Non-standard models or multiple stale templates", "#78350f"],
-              ["HIGH", "Significant divergence — action needed", "#7f1d1d"],
+              ["NONE", "Score 0 — fully aligned with team configuration", "#064e3b"],
+              ["LOW", "Score 1–2 — minor issue, e.g., partial capture only", "#78350f"],
+              ["MEDIUM", "Score 3–4 — a non-allowed model or multiple stale overrides", "#d97706"],
+              ["HIGH", "Score 5+ — multiple violations, needs immediate attention", "#7f1d1d"],
             ] as const).map(([level, desc, bg]) => (
               <div key={level} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <Pill color={bg}>{level}</Pill>
@@ -425,7 +435,71 @@ Do not suggest cosmetic changes or add unnecessary comments.`}</Code>
             ))}
           </div>
 
+          <H3>Dashboard Columns</H3>
+          <P>The drift table shows each engineer with these columns:</P>
+
+          <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 4 }}>
+            <ListItem title="Drift">Severity badge — NONE, LOW, MEDIUM, or HIGH.</ListItem>
+            <ListItem title="Models">Count of non-allowed models, or &quot;OK&quot; if compliant.</ListItem>
+            <ListItem title="Templates">Stale override count, or ratio like 2/5 (overrides / total bases).</ListItem>
+            <ListItem title="Gateway">Icon showing whether the engineer has gateway activity.</ListItem>
+            <ListItem title="Last Sync">Time since the engineer&apos;s last <Mono>airails sync</Mono> event.</ListItem>
+            <ListItem title="Details">Expandable — every drift reason as human-readable text.</ListItem>
+          </div>
+
+          <H3>Resolving Drift</H3>
+          <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 4 }}>
+            <ListItem title="Model drift">Engineer switches to an allowed model, or a lead updates the allowlist in Product Settings.</ListItem>
+            <ListItem title="Stale overrides">Engineer runs <Mono>airails sync</Mono> or updates their override in the dashboard to incorporate base template changes.</ListItem>
+            <ListItem title="No gateway data">Configure the gateway proxy so AI requests are captured with full token and cost data.</ListItem>
+          </div>
+
           <Callout type="tip">Run a drift check after promoting a template or changing the model allowlist. It shows who needs to update.</Callout>
+
+          <Divider />
+
+          {/* ─── Audit ─── */}
+          <H2 id="audit">Prompt Audit</H2>
+          <P>An immutable changelog of every prompt template modification. Answers: <S>who changed what, when, and how did it affect code quality?</S></P>
+
+          <H3>What Gets Logged</H3>
+          <P>Every prompt operation is automatically recorded with before/after content snapshots:</P>
+
+          <div style={{ margin: "16px 0", display: "flex", flexDirection: "column", gap: 10 }}>
+            {([
+              ["CREATE_BASE", "#064e3b", "A lead creates a new base template for a task type."],
+              ["CREATE_OVERRIDE", "#1e3a5f", "An engineer creates a personal override from a base template."],
+              ["UPDATE", "#78350f", "An engineer edits their override. Old and new content are both captured."],
+              ["PROMOTE", "#4c1d95", "A lead promotes an override to become the new base. Records source engineer and override ID."],
+              ["DELETE", "#7f1d1d", "A template is removed. Final content is snapshot for the record."],
+            ] as const).map(([action, bg, desc]) => (
+              <div key={action} style={{ display: "flex", alignItems: "flex-start", gap: 12, padding: "14px 18px", background: "var(--color-surface-raised)", border: "1px solid var(--color-border-subtle)", borderRadius: 8 }}>
+                <Pill color={bg}>{action}</Pill>
+                <span style={{ fontSize: 13, color: "var(--color-text-muted)", lineHeight: 1.65 }}>{desc}</span>
+              </div>
+            ))}
+          </div>
+
+          <H3>Using the Audit Page</H3>
+          <P>Go to <S>Team → Audit</S> to see the full log. Available to LEADs and OWNERs.</P>
+
+          <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 4 }}>
+            <ListItem title="Timeline table">Every event with timestamp, engineer name, action badge, template name, task type, and version number.</ListItem>
+            <ListItem title="Diff view">Click any row to expand a side-by-side comparison. Changed lines are highlighted in red (removed) and green (added).</ListItem>
+            <ListItem title="Filter by action">Use the dropdown to narrow the log — e.g., show only promotions or updates.</ListItem>
+            <ListItem title="Acceptance rate">Each row shows the template&apos;s current acceptance rate, so you can correlate prompt changes with quality outcomes.</ListItem>
+            <ListItem title="Pagination">Load older entries with cursor-based pagination without performance issues.</ListItem>
+          </div>
+
+          <Callout type="info">Audit logs are immutable and fire-and-forget — they never block or fail the original prompt operation. If a log write fails, the user&apos;s action still succeeds.</Callout>
+
+          <H3>Common Workflows</H3>
+
+          <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 4 }}>
+            <ListItem title="Investigate a quality drop">Filter by template → find the UPDATE that coincides with the acceptance rate drop → compare before/after content.</ListItem>
+            <ListItem title="Review a promotion">Filter by PROMOTE → see which override was promoted, by whom, and what content replaced the base.</ListItem>
+            <ListItem title="Onboard new leads">Audit page gives full context on how templates evolved — no need to dig through git history.</ListItem>
+          </div>
 
           <Divider />
 
@@ -464,6 +538,7 @@ Do not suggest cosmetic changes or add unnecessary comments.`}</Code>
           <NavGroup label="Features">
             <NavItem href="prompts">Prompts</NavItem>
             <NavItem href="drift">Config Drift</NavItem>
+            <NavItem href="audit">Prompt Audit</NavItem>
             <NavItem href="keys">API Keys</NavItem>
           </NavGroup>
         </div>
