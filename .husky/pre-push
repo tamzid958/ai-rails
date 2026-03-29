@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+./scripts/bump-if-changed.sh "$1"
