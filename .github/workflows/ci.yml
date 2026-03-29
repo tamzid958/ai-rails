@@ -20,6 +20,9 @@ on:
 
 env:
   AIRAILS_SECRET: ci-test-secret
+  DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+  AUTH_SECRET: ci-test-secret
+  AUTH_TRUST_HOST: "true"
 
 jobs:
   check:
