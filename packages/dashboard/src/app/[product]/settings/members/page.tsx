@@ -20,7 +20,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Avatar } from "@/components/ui/avatar";
 import { Tooltip } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Plus, MoreHorizontal, Shield, Trash2, Users } from "lucide-react";
+import { Plus, MoreHorizontal, Shield, Trash2, Users, UserPlus, Clock } from "lucide-react";
 
 const ROLE_VARIANT = { OWNER: "info", LEAD: "success", MEMBER: "default" } as const;
 
@@ -57,6 +57,26 @@ export default function MembersPage() {
   const removeMutation = useMutation({
     mutationFn: (id: string) => api.removeMember(id),
     onSuccess: () => { setRemoveId(null); queryClient.invalidateQueries({ queryKey: ["settings-members"] }); },
+  });
+
+  type PendingUser = { id: string; name: string; email: string; createdAt: string };
+
+  const { data: pending } = useQuery<PendingUser[]>({
+    queryKey: ["settings-members-pending", product.id],
+    queryFn: async () => {
+      const res = await fetch(`/api/settings/members/pending?productId=${product.id}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: !isMember,
+  });
+
+  const quickAddMutation = useMutation({
+    mutationFn: (pendingEmail: string) => api.addMember(product.id, pendingEmail, "MEMBER"),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings-members"] });
+      queryClient.invalidateQueries({ queryKey: ["settings-members-pending"] });
+    },
   });
 
   if (isMember) return <ForbiddenPage message="Member management requires LEAD or OWNER role." />;
@@ -156,6 +176,37 @@ export default function MembersPage() {
           </Table>
         )}
       </ChartCard>
+
+      {/* Pending Users */}
+      {pending && pending.length > 0 && (
+        <ChartCard
+          title="Pending Users"
+          description="Signed in but not added to any product yet"
+          action={<span className="text-xs text-warning tabular-nums">{pending.length} waiting</span>}
+        >
+          <div className="space-y-2">
+            {pending.map((p) => (
+              <div key={p.id} className="flex items-center justify-between py-2 px-3 rounded-md border border-border-subtle">
+                <div className="flex items-center gap-3">
+                  <Clock size={14} className="text-warning shrink-0" />
+                  <div>
+                    <p className="text-sm text-text-primary">{p.name}</p>
+                    <p className="text-xs text-text-tertiary font-mono">{p.email}</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => quickAddMutation.mutate(p.email)}
+                  disabled={quickAddMutation.isPending}
+                >
+                  <UserPlus size={12} className="mr-1" /> Add
+                </Button>
+              </div>
+            ))}
+          </div>
+        </ChartCard>
+      )}
 
       {/* Add Member Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
