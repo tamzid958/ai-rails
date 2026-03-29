@@ -7,12 +7,15 @@ const PRODUCT_CREATION = process.env.PRODUCT_CREATION ?? "anyone";
 
 export default async function CreateProductLayout({ children }: { children: ReactNode }) {
   if (PRODUCT_CREATION === "owners") {
-    const engineer = await getEngineer();
-    const isOwner = await prisma.productMembership.findFirst({
-      where: { engineerId: engineer.id, role: "OWNER" },
-    });
-    if (!isOwner) {
-      redirect("/products");
+    const totalProducts = await prisma.product.count();
+    if (totalProducts > 0) {
+      const engineer = await getEngineer();
+      const isOwner = await prisma.productMembership.findFirst({
+        where: { engineerId: engineer.id, role: "OWNER" },
+      });
+      if (!isOwner) {
+        redirect("/products");
+      }
     }
   }
 

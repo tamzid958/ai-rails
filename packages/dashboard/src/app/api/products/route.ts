@@ -11,14 +11,17 @@ export const POST = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
 
   if (PRODUCT_CREATION === "owners") {
-    const isOwner = await prisma.productMembership.findFirst({
-      where: { engineerId: engineer.id, role: "OWNER" },
-    });
-    if (!isOwner) {
-      return NextResponse.json(
-        { error: "Only product owners can create new products" },
-        { status: 403 },
-      );
+    const totalProducts = await prisma.product.count();
+    if (totalProducts > 0) {
+      const isOwner = await prisma.productMembership.findFirst({
+        where: { engineerId: engineer.id, role: "OWNER" },
+      });
+      if (!isOwner) {
+        return NextResponse.json(
+          { error: "Only product owners can create new products" },
+          { status: 403 },
+        );
+      }
     }
   }
 

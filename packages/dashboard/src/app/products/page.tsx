@@ -21,7 +21,9 @@ export default async function ProductsPage() {
     },
   });
 
+  const totalProducts = await prisma.product.count();
   const canCreate =
+    totalProducts === 0 ||
     PRODUCT_CREATION === "anyone" ||
     (PRODUCT_CREATION === "owners" && memberships.some((m) => m.role === "OWNER"));
 
