@@ -27,12 +27,20 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - LITELLM_URL=http://litellm:4000
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - CORS_ORIGIN=${CORS_ORIGIN}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_PROMPTS=${LOG_PROMPTS:-false}
     deploy:
       resources:
         limits:
           memory: 512M
           cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: always
 
   dashboard:
@@ -46,11 +54,28 @@ services:
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
       - GITLAB_CLIENT_ID=${GITLAB_CLIENT_ID:-}
       - GITLAB_CLIENT_SECRET=${GITLAB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID:-}
+      - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET:-}
+      - MICROSOFT_TENANT_ID=${MICROSOFT_TENANT_ID:-common}
+
+      - LITELLM_URL=http://litellm:4000
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - AUTH_URL=${NEXT_PUBLIC_DASHBOARD_URL}
+      - ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS}
+      - INVITE_ONLY=${INVITE_ONLY:-true}
+      - PRODUCT_CREATION=${PRODUCT_CREATION:-owners}
     deploy:
       resources:
         limits:
           memory: 512M
           cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: always
 
   webhook:
@@ -66,4 +91,9 @@ services:
         limits:
           memory: 512M
           cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     restart: always

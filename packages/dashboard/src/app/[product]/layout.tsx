@@ -54,6 +54,8 @@ export default async function ProductLayout({
   const isLead = role === "LEAD";
   const isMember = role === "MEMBER";
   const userName = engineer.name || engineer.email || "";
+  const productCreation = process.env.PRODUCT_CREATION ?? "anyone";
+  const canCreateProduct = productCreation === "anyone" || isOwner;
 
   return (
     <ProductProvider
@@ -74,6 +76,7 @@ export default async function ProductLayout({
       <Shell
         productSlug={product.slug}
         canManageTeam={isOwner || isLead}
+        canCreateProduct={canCreateProduct}
         userName={userName}
         products={products}
       >

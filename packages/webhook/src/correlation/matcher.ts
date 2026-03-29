@@ -67,14 +67,6 @@ export async function correlatePrToActivities(
   const allActivities = [...branchedActivities, ...unbranchedActivities];
   const allIds = allActivities.map((a) => a.id);
 
-  // Link activities to PR (never overwrite existing prEventId)
-  if (allIds.length > 0) {
-    await prisma.aiActivity.updateMany({
-      where: { id: { in: allIds }, prEventId: null },
-      data: { prEventId },
-    });
-  }
-
   const richness = classifyDataRichness(
     allActivities.map((a) => a.captureMethod),
   );
@@ -83,14 +75,24 @@ export async function correlatePrToActivities(
     ...new Set(allActivities.map((a) => a.tool).filter(Boolean)),
   ] as string[];
 
-  await prisma.prEvent.update({
-    where: { id: prEventId },
-    data: {
-      aiActivitiesCount: allIds.length,
-      totalTokensUsed: sumTokens(allActivities),
-      aiToolsUsed: tools,
-      dataRichness: richness,
-    },
+  // Atomic: link activities + update PR metadata in a single transaction
+  await prisma.$transaction(async (tx) => {
+    if (allIds.length > 0) {
+      await tx.aiActivity.updateMany({
+        where: { id: { in: allIds }, prEventId: null },
+        data: { prEventId },
+      });
+    }
+
+    await tx.prEvent.update({
+      where: { id: prEventId },
+      data: {
+        aiActivitiesCount: allIds.length,
+        totalTokensUsed: sumTokens(allActivities),
+        aiToolsUsed: tools,
+        dataRichness: richness,
+      },
+    });
   });
 
   return { linked: allIds.length, richness };

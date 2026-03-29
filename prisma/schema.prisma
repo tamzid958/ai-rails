@@ -48,7 +48,15 @@ model Product {
   defaultModel       String?
   costAlertDaily     Float?
   costAlertEngineer  Float?
+  alertWebhookUrl    String?
   webhookSecret      String?
+
+  // AI Policy — enforcement, not just alerting
+  spendCapDaily      Float?
+  spendCapMonthly    Float?
+  gatewayRequired    Boolean  @default(false)
+  minTaggingRate     Float?
+  allowedTools       String[] @default([])
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -85,12 +93,14 @@ model Engineer {
 // ─── ProductMembership (join table) ─────────────────────────────────────────
 
 model ProductMembership {
-  id         String     @id @default(uuid())
-  productId  String
-  engineerId String
-  role       MemberRole @default(MEMBER)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id             String     @id @default(uuid())
+  productId      String
+  engineerId     String
+  role           MemberRole @default(MEMBER)
+  activationStatus String   @default("INVITED")   // INVITED | KEY_CREATED | FIRST_ACTIVITY | ACTIVE
+  starterKeyId   String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 
   product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   engineer Engineer @relation(fields: [engineerId], references: [id], onDelete: Cascade)
@@ -134,6 +144,7 @@ model ApiKey {
 
   @@index([productId])
   @@index([engineerId])
+  @@index([key, isActive])
 }
 
 // ─── AiActivity (unified activity log) ──────────────────────────────────────

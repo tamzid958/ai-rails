@@ -2,7 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
 import type { HealthResponse } from "@airails/shared";
-import { Unauthorized, Forbidden, NotFound, prisma } from "@airails/shared";
+import { Unauthorized, Forbidden, NotFound, prisma, validateSecrets } from "@airails/shared";
 
 import "./auth/types.js";
 import { authenticateHook } from "./auth/authenticate.js";
@@ -20,10 +20,13 @@ import { prRoutes } from "./routes/prs.js";
 import { effectivenessRoutes } from "./routes/effectiveness.js";
 import { otherRoutes } from "./routes/other.js";
 
+validateSecrets(["AIRAILS_SECRET"]);
+
 const DEFAULT_PORT = 8080;
 const HOST = "0.0.0.0";
 
 const app = Fastify({
+  bodyLimit: 2 * 1024 * 1024, // 2 MB — adjust for expected LLM context sizes
   logger: {
     level: process.env["LOG_LEVEL"] ?? "info",
     formatters: {
@@ -32,7 +35,12 @@ const app = Fastify({
   },
 });
 
-await app.register(cors);
+await app.register(cors, {
+  origin: process.env["CORS_ORIGIN"]
+    ? process.env["CORS_ORIGIN"].split(",")
+    : ["http://localhost:3000"],
+  credentials: true,
+});
 await app.register(sensible);
 await registerRateLimiting(app);
 await registerSecurityHeaders(app);
@@ -79,12 +87,27 @@ app.setErrorHandler((error, _request, reply) => {
   });
 });
 
-// Health check (no auth)
+// Health check — liveness (no auth)
 app.get("/health", async (): Promise<HealthResponse> => ({
   status: "ok",
   service: "gateway",
   uptime: process.uptime(),
 }));
+
+// Health check — readiness (verifies DB connectivity)
+app.get("/health/ready", async (_request, reply) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { status: "ok", service: "gateway", uptime: process.uptime() };
+  } catch (err) {
+    app.log.error(err, "Readiness check failed");
+    return reply.status(503).send({
+      status: "error",
+      service: "gateway",
+      message: "Database connectivity check failed",
+    });
+  }
+});
 
 // LLM proxy routes
 await app.register(proxyRoutes, { prefix: "/v1" });

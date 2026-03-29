@@ -1,8 +1,9 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import sensible from "@fastify/sensible";
+import rateLimit from "@fastify/rate-limit";
 import type { HealthResponse } from "@airails/shared";
-import { prisma } from "@airails/shared";
+import { prisma, validateSecrets } from "@airails/shared";
 import { registerSecurityHeaders } from "./middleware/security-headers.js";
 import { githubHandler } from "./providers/github.js";
 import { gitlabHandler } from "./providers/gitlab.js";
@@ -10,6 +11,8 @@ import { scheduleNightlyJobs } from "./jobs/scheduler.js";
 
 // Start BullMQ workers (side-effect import)
 import "./jobs/workers.js";
+
+validateSecrets(["DATABASE_URL"]);
 
 const DEFAULT_PORT = 8081;
 const HOST = "0.0.0.0";
@@ -25,6 +28,15 @@ const app = Fastify({
 
 await app.register(cors);
 await app.register(sensible);
+await app.register(rateLimit, {
+  max: 200,
+  timeWindow: "1 minute",
+  keyGenerator: (request) => request.ip,
+  allowList: (request) => {
+    const routePath = request.routeOptions?.url ?? request.url;
+    return routePath.startsWith("/health");
+  },
+});
 await registerSecurityHeaders(app);
 
 app.get("/health", async (): Promise<HealthResponse> => ({
@@ -32,6 +44,21 @@ app.get("/health", async (): Promise<HealthResponse> => ({
   service: "webhook",
   uptime: process.uptime(),
 }));
+
+// Readiness check — verifies DB + Redis connectivity
+app.get("/health/ready", async (_request, reply) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    return { status: "ok", service: "webhook", uptime: process.uptime() };
+  } catch (err) {
+    app.log.error(err, "Readiness check failed");
+    return reply.status(503).send({
+      status: "error",
+      service: "webhook",
+      message: "Database connectivity check failed",
+    });
+  }
+});
 
 app.post("/webhooks/github", githubHandler);
 app.post("/webhooks/gitlab", gitlabHandler);

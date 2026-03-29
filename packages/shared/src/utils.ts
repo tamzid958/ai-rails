@@ -1,6 +1,28 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { API_KEY_PREFIX } from "./constants.js";
 
+const UNSAFE_DEFAULTS = new Set([
+  "change-this-to-a-random-secret",
+  "change-this",
+]);
+
+export function validateSecrets(requiredVars: string[]): void {
+  for (const name of requiredVars) {
+    const value = process.env[name];
+    if (!value) {
+      throw new Error(`${name} environment variable is required`);
+    }
+    if (
+      process.env["NODE_ENV"] === "production" &&
+      UNSAFE_DEFAULTS.has(value)
+    ) {
+      throw new Error(
+        `${name} is set to an unsafe default value. Generate a cryptographically random secret.`,
+      );
+    }
+  }
+}
+
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   "gpt-4o": { input: 2.5, output: 10 },
   "gpt-4o-mini": { input: 0.15, output: 0.6 },

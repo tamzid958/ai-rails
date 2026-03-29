@@ -21,6 +21,7 @@ import { PeriodSelector } from "@/components/engineer/period-selector";
 import { TaggingBanner } from "@/components/engineer/tagging-banner";
 import { SwissAreaChart } from "@/components/charts/swiss-line-chart";
 import { SuggestionsCard } from "@/components/recommendations/suggestions-card";
+import { OnboardingChecklist } from "@/components/engineer/onboarding-checklist";
 
 const CAPTURE_BADGE_VARIANT = {
   GATEWAY: "info",
@@ -100,6 +101,8 @@ export default function EngineerOverviewPage() {
           <PeriodSelector value={period} onChange={setPeriod} />
         </div>
       </div>
+
+      <OnboardingChecklist />
 
       <TaggingBanner />
 

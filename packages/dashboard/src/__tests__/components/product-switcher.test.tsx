@@ -20,6 +20,7 @@ vi.mock("next/link", () => ({
 
 // Mock Radix dropdown so it renders content synchronously in jsdom
 vi.mock("@/components/ui/dropdown-menu", () => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const Trigger = ({ children, asChild, ...props }: { children: React.ReactNode; asChild?: boolean; [key: string]: unknown }) => (
     <div data-testid="dropdown-trigger" {...props}>{children}</div>
   );

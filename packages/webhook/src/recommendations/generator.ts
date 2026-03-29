@@ -9,6 +9,7 @@ import {
   checkTemplateDegradation,
   type RecommendationData,
 } from "./rules.js";
+import { jobLogger } from "../jobs/logger.js";
 
 async function upsertRecommendation(
   productId: string,
@@ -83,5 +84,47 @@ export async function generateRecommendations(
     await upsertRecommendation(productId, rec);
   }
 
+  // Deliver via outbound webhook if configured
+  if (allRecs.length > 0) {
+    await deliverAlertWebhook(productId, allRecs);
+  }
+
   return allRecs.length;
+}
+
+async function deliverAlertWebhook(
+  productId: string,
+  recs: RecommendationData[],
+): Promise<void> {
+  const product = await prisma.product.findUnique({
+    where: { id: productId },
+    select: { alertWebhookUrl: true, slug: true },
+  });
+
+  if (!product?.alertWebhookUrl) return;
+
+  try {
+    await fetch(product.alertWebhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event: "recommendations.generated",
+        product: { id: productId, slug: product.slug },
+        count: recs.length,
+        recommendations: recs.map((r) => ({
+          type: r.type,
+          title: r.title,
+          body: r.body,
+          priority: r.priority,
+        })),
+        timestamp: new Date().toISOString(),
+      }),
+      signal: AbortSignal.timeout(10_000),
+    });
+  } catch (err) {
+    jobLogger.warn(
+      { productId, err: (err as Error).message },
+      "Failed to deliver alert webhook",
+    );
+  }
 }

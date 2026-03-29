@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/layout/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ArrowRight, Layers } from "lucide-react";
 
+const PRODUCT_CREATION = process.env.PRODUCT_CREATION ?? "anyone";
+
 export default async function ProductsPage() {
   const engineer = await getEngineer();
 
@@ -19,6 +21,10 @@ export default async function ProductsPage() {
     },
   });
 
+  const canCreate =
+    PRODUCT_CREATION === "anyone" ||
+    (PRODUCT_CREATION === "owners" && memberships.some((m) => m.role === "OWNER"));
+
   return (
     <div className="min-h-screen bg-surface">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12 animate-fade-in">
@@ -26,9 +32,11 @@ export default async function ProductsPage() {
           title="Products"
           description="Manage your AI governance products"
           actions={
-            <Button asChild size="sm">
-              <Link href="/products/create">Create Product</Link>
-            </Button>
+            canCreate ? (
+              <Button asChild size="sm">
+                <Link href="/products/create">Create Product</Link>
+              </Button>
+            ) : undefined
           }
         />
 
@@ -36,11 +44,16 @@ export default async function ProductsPage() {
           <EmptyState
             icon={<Layers size={28} strokeWidth={1} />}
             title="No products yet"
-            description="Create a product to start tracking AI usage across your team."
+            description={canCreate
+              ? "Create a product to start tracking AI usage across your team."
+              : "You haven\u2019t been added to any products yet. Ask a product owner to invite you."
+            }
             action={
-              <Button asChild size="sm">
-                <Link href="/products/create">Create Product</Link>
-              </Button>
+              canCreate ? (
+                <Button asChild size="sm">
+                  <Link href="/products/create">Create Product</Link>
+                </Button>
+              ) : undefined
             }
           />
         ) : (

@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
@@ -32,10 +33,16 @@ export async function GET(request: NextRequest) {
     defaultModel: product.defaultModel,
     costAlertDaily: product.costAlertDaily,
     costAlertEngineer: product.costAlertEngineer,
+    alertWebhookUrl: product.alertWebhookUrl,
+    spendCapDaily: product.spendCapDaily,
+    spendCapMonthly: product.spendCapMonthly,
+    gatewayRequired: product.gatewayRequired,
+    minTaggingRate: product.minTaggingRate,
+    allowedTools: product.allowedTools,
   });
-}
+});
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const body = (await request.json()) as Record<string, unknown>;
   const productId = body.productId as string;
@@ -67,6 +74,24 @@ export async function PATCH(request: NextRequest) {
   ) {
     data.costAlertEngineer = body.costAlertEngineer;
   }
+  if (typeof body.alertWebhookUrl === "string" || body.alertWebhookUrl === null) {
+    data.alertWebhookUrl = body.alertWebhookUrl;
+  }
+  if (typeof body.spendCapDaily === "number" || body.spendCapDaily === null) {
+    data.spendCapDaily = body.spendCapDaily;
+  }
+  if (typeof body.spendCapMonthly === "number" || body.spendCapMonthly === null) {
+    data.spendCapMonthly = body.spendCapMonthly;
+  }
+  if (typeof body.gatewayRequired === "boolean") {
+    data.gatewayRequired = body.gatewayRequired;
+  }
+  if (typeof body.minTaggingRate === "number" || body.minTaggingRate === null) {
+    data.minTaggingRate = body.minTaggingRate;
+  }
+  if (Array.isArray(body.allowedTools)) {
+    data.allowedTools = body.allowedTools;
+  }
 
   const product = await prisma.product.update({
     where: { id: productId },
@@ -82,5 +107,11 @@ export async function PATCH(request: NextRequest) {
     defaultModel: product.defaultModel,
     costAlertDaily: product.costAlertDaily,
     costAlertEngineer: product.costAlertEngineer,
+    alertWebhookUrl: product.alertWebhookUrl,
+    spendCapDaily: product.spendCapDaily,
+    spendCapMonthly: product.spendCapMonthly,
+    gatewayRequired: product.gatewayRequired,
+    minTaggingRate: product.minTaggingRate,
+    allowedTools: product.allowedTools,
   });
-}
+});

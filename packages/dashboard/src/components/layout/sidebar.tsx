@@ -25,7 +25,7 @@ type NavSection = {
 };
 
 type ProductItem = { name: string; slug: string; role: string };
-type SidebarProps = { productSlug: string; canManageTeam: boolean; products?: ProductItem[] };
+type SidebarProps = { productSlug: string; canManageTeam: boolean; canCreateProduct?: boolean; products?: ProductItem[] };
 
 function buildSections(productSlug: string, canManageTeam: boolean): NavSection[] {
   const base = `/${productSlug}`;
@@ -58,18 +58,20 @@ function buildSections(productSlug: string, canManageTeam: boolean): NavSection[
     });
   }
 
-  sections.push({
-    title: "Settings",
-    icon: Settings,
-    items: [
-      { label: "Product", href: `${base}/settings/product`, icon: Layers },
-      { label: "Repositories", href: `${base}/settings/repos`, icon: GitBranch },
-      { label: "Members", href: `${base}/settings/members`, icon: Users },
-      { label: "API Keys", href: `${base}/settings/api-keys`, icon: Key },
-      { label: "Providers", href: `${base}/settings/providers`, icon: Shield },
-      { label: "Webhooks", href: `${base}/settings/webhooks`, icon: Webhook },
-    ],
-  });
+  if (canManageTeam) {
+    sections.push({
+      title: "Settings",
+      icon: Settings,
+      items: [
+        { label: "Product", href: `${base}/settings/product`, icon: Layers },
+        { label: "Repositories", href: `${base}/settings/repos`, icon: GitBranch },
+        { label: "Members", href: `${base}/settings/members`, icon: Users },
+        { label: "API Keys", href: `${base}/settings/api-keys`, icon: Key },
+        { label: "Providers", href: `${base}/settings/providers`, icon: Shield },
+        { label: "Webhooks", href: `${base}/settings/webhooks`, icon: Webhook },
+      ],
+    });
+  }
 
   return sections;
 }
@@ -211,7 +213,7 @@ export function SidebarNav({ productSlug, canManageTeam, collapsed = false }: Si
   );
 }
 
-function ProductSwitcher({ products, currentSlug, collapsed }: { products: ProductItem[]; currentSlug: string; collapsed: boolean }) {
+function ProductSwitcher({ products, currentSlug, collapsed, canCreateProduct }: { products: ProductItem[]; currentSlug: string; collapsed: boolean; canCreateProduct: boolean }) {
   const [open, setOpen] = useState(false);
   const current = products.find((p) => p.slug === currentSlug);
 
@@ -268,15 +270,17 @@ function ProductSwitcher({ products, currentSlug, collapsed }: { products: Produ
                   </div>
                 </Link>
               ))}
-              <Link
-                href="/products/create"
-                className="flex items-center gap-2.5 py-1.5 px-1 rounded-md no-underline text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary"
-              >
-                <div className="w-7 h-7 rounded-md border border-dashed border-border-subtle flex items-center justify-center shrink-0">
-                  <Plus size={12} strokeWidth={1.5} />
-                </div>
-                <span className="text-[13px]">New product</span>
-              </Link>
+              {canCreateProduct !== false && (
+                <Link
+                  href="/products/create"
+                  className="flex items-center gap-2.5 py-1.5 px-1 rounded-md no-underline text-text-muted transition-colors hover:bg-surface-raised hover:text-text-secondary"
+                >
+                  <div className="w-7 h-7 rounded-md border border-dashed border-border-subtle flex items-center justify-center shrink-0">
+                    <Plus size={12} strokeWidth={1.5} />
+                  </div>
+                  <span className="text-[13px]">New product</span>
+                </Link>
+              )}
             </div>
           </motion.div>
         )}
@@ -295,7 +299,7 @@ function subscribeStorage(cb: () => void) {
   return () => window.removeEventListener("storage", cb);
 }
 
-export function Sidebar({ productSlug, canManageTeam, products = [] }: SidebarProps) {
+export function Sidebar({ productSlug, canManageTeam, canCreateProduct, products = [] }: SidebarProps) {
   const collapsed = useSyncExternalStore(subscribeStorage, getStoredCollapsed, () => false);
 
   function toggleCollapse() {
@@ -332,7 +336,7 @@ export function Sidebar({ productSlug, canManageTeam, products = [] }: SidebarPr
       <div className="mt-auto border-t border-white/6">
         {products.length > 0 && (
           <div className="p-3">
-            <ProductSwitcher products={products} currentSlug={productSlug} collapsed={collapsed} />
+            <ProductSwitcher products={products} currentSlug={productSlug} collapsed={collapsed} canCreateProduct={canCreateProduct ?? true} />
           </div>
         )}
       </div>

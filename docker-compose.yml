@@ -1,6 +1,6 @@
 services:
   redis:
-    image: redis:8-alpine
+    image: redis:latest
     ports:
       - "6379:6379"
     volumes:
@@ -13,7 +13,7 @@ services:
     restart: unless-stopped
 
   litellm:
-    image: ghcr.io/berriai/litellm:main-latest
+    image: ghcr.io/berriai/litellm:latest
     ports:
       - "4000:4000"
     environment:
@@ -43,7 +43,9 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - LITELLM_URL=http://litellm:4000
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-change-this}
       - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_PROMPTS=${LOG_PROMPTS:-true}
     depends_on:
       redis:
         condition: service_healthy
@@ -73,6 +75,17 @@ services:
       - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
       - GITLAB_CLIENT_ID=${GITLAB_CLIENT_ID:-}
       - GITLAB_CLIENT_SECRET=${GITLAB_CLIENT_SECRET:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID:-}
+      - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET:-}
+      - MICROSOFT_TENANT_ID=${MICROSOFT_TENANT_ID:-common}
+
+      - LITELLM_URL=http://litellm:4000
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-change-this}
+      - ALLOWED_EMAIL_DOMAINS=${ALLOWED_EMAIL_DOMAINS:-}
+      - INVITE_ONLY=${INVITE_ONLY:-false}
+      - PRODUCT_CREATION=${PRODUCT_CREATION:-anyone}
     healthcheck:
       test: ["CMD-SHELL", "node -e 'fetch(\"http://localhost:3000/\").then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))'"]
       interval: 10s

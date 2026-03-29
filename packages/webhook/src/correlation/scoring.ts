@@ -50,6 +50,9 @@ function computeRates(statuses: { status: PrStatus; reviewCycles: number }[]): E
     (pr) => pr.status === "MERGED" && pr.reviewCycles > 1,
   ).length;
 
+  // NOTE: REVERTED status is included in rejection rate but no webhook handler
+  // currently sets it. Rejection rate may be underreported until revert
+  // detection is implemented in the PR handler.
   const rejected = statuses.filter(
     (pr) => pr.status === "CLOSED" || pr.status === "REVERTED",
   ).length;

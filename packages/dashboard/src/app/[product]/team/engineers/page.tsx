@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useProduct } from "@/lib/product-context";
-import { api, type Period, type TeamEngineersResponse } from "@/lib/api-client";
+import { api, type Period } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

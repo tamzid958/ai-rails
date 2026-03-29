@@ -15,12 +15,18 @@ export async function handlePushEvent(
     const aiTool = trailers["AI-Assisted-By"];
 
     const gitUsername = commit.author.username;
-    if (!gitUsername) continue;
+    if (!gitUsername) {
+      logger.warn({ commitId: commit.id }, "Commit has no gitUsername — skipping");
+      continue;
+    }
 
     const engineer = await prisma.engineer.findUnique({
       where: { gitUsername },
     });
-    if (!engineer) continue;
+    if (!engineer) {
+      logger.warn({ gitUsername, commitId: commit.id }, "No engineer found for gitUsername — skipping");
+      continue;
+    }
 
     const membership = await prisma.productMembership.findUnique({
       where: {

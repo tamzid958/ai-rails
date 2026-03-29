@@ -19,16 +19,19 @@ function pass(msg: string): void {
   console.log(noColor ? `✓ ${msg}` : chalk.green(`✓ ${msg}`));
 }
 
-function fail(msg: string): void {
+function fail(msg: string, fix?: string): void {
   console.log(noColor ? `✗ ${msg}` : chalk.red(`✗ ${msg}`));
+  if (fix) {
+    console.log(noColor ? `  → ${fix}` : chalk.yellow(`  → ${fix}`));
+  }
 }
 
 export const doctorCommand = new Command("doctor")
   .description("Validate AIRails setup and connectivity")
   .action(async () => {
     let allPassed = true;
-    const markFail = (msg: string) => {
-      fail(msg);
+    const markFail = (msg: string, fix?: string) => {
+      fail(msg, fix);
       allPassed = false;
     };
 
@@ -37,7 +40,8 @@ export const doctorCommand = new Command("doctor")
       pass(".airails/ directory exists");
     } else {
       markFail(
-        ".airails/ directory missing — run `airails init --product <slug>`",
+        ".airails/ directory missing",
+        "Run: airails init --product <your-product-slug>",
       );
       return;
     }
@@ -46,7 +50,7 @@ export const doctorCommand = new Command("doctor")
     if (configFileExists()) {
       pass("config.yml exists");
     } else {
-      markFail("config.yml missing — run `airails init`");
+      markFail("config.yml missing", "Run: airails init");
       return;
     }
 
@@ -61,12 +65,13 @@ export const doctorCommand = new Command("doctor")
         pass(`Product: ${slug}`);
       } else {
         markFail(
-          "No product.slug in config.yml — run `airails init --product <slug>`",
+          "No product.slug in config.yml",
+          "Run: airails init --product <your-product-slug>",
         );
         return;
       }
     } catch {
-      markFail("config.yml is invalid");
+      markFail("config.yml is invalid", "Delete .airails/config.yml and run: airails init");
       return;
     }
 
@@ -74,7 +79,7 @@ export const doctorCommand = new Command("doctor")
     if (isGitRepo()) {
       pass("Inside a git repository");
     } else {
-      markFail("Not inside a git repository");
+      markFail("Not inside a git repository", "Run: git init");
     }
 
     // 5. Repo detected
@@ -82,7 +87,7 @@ export const doctorCommand = new Command("doctor")
     if (repoFullName) {
       pass(`Repo: ${repoFullName}`);
     } else {
-      markFail("Could not detect repo from git remote");
+      markFail("Could not detect repo from git remote", "Run: git remote add origin <repo-url>");
     }
 
     // 6. Prompt templates
@@ -94,10 +99,10 @@ export const doctorCommand = new Command("doctor")
       if (templates.length > 0) {
         pass(`${templates.length} prompt template(s) found`);
       } else {
-        markFail("No prompt templates in .airails/prompts/");
+        markFail("No prompt templates in .airails/prompts/", "Run: airails sync — or create .airails/prompts/<task-type>.md files manually");
       }
     } else {
-      markFail(".airails/prompts/ directory missing");
+      markFail(".airails/prompts/ directory missing", "Run: mkdir -p .airails/prompts && airails sync");
     }
 
     // 7. Pre-commit hook
@@ -113,11 +118,12 @@ export const doctorCommand = new Command("doctor")
         pass("Pre-commit hook installed");
       } else {
         markFail(
-          "Pre-commit hook not installed — run `airails hooks install`",
+          "Pre-commit hook not installed",
+          "Run: airails hooks install",
         );
       }
     } catch {
-      markFail("Could not check git hooks");
+      markFail("Could not check git hooks", "Ensure you are in a git repository with: git rev-parse --git-dir");
     }
 
     // 8. API key
@@ -127,7 +133,8 @@ export const doctorCommand = new Command("doctor")
       pass("API key found via AIRAILS_API_KEY env var");
     } else {
       markFail(
-        `No API key for "${slug}" — run \`airails keys create --label "CLI"\``,
+        `No API key for "${slug}"`,
+        `Run: airails keys create --label "CLI" — or set AIRAILS_API_KEY env var`,
       );
     }
 
@@ -137,11 +144,12 @@ export const doctorCommand = new Command("doctor")
       if (res.ok) {
         pass(`Gateway reachable at ${gatewayUrl}`);
       } else {
-        markFail(`Gateway returned ${res.status} at ${gatewayUrl}`);
+        markFail(`Gateway returned ${res.status} at ${gatewayUrl}`, "Check gateway logs: docker compose logs gateway");
       }
     } catch {
       markFail(
-        `Gateway not reachable at ${gatewayUrl} — is it running?`,
+        `Gateway not reachable at ${gatewayUrl}`,
+        "Start the gateway: docker compose up -d gateway — or check gateway.url in .airails/config.yml",
       );
     }
 
@@ -154,7 +162,7 @@ export const doctorCommand = new Command("doctor")
       );
       pass(`API key valid (product: ${product.slug})`);
     } catch {
-      markFail("API key invalid or product not accessible");
+      markFail("API key invalid or product not accessible", `Run: airails keys create --label "CLI" — then: airails config set --api-key <new-key>`);
     }
 
     console.log();

@@ -6,6 +6,8 @@ import { ArrowRight } from "lucide-react";
 type LoginViewProps = {
   signInGitHub?: () => Promise<void>;
   signInGitLab?: () => Promise<void>;
+  signInGoogle?: () => Promise<void>;
+  signInMicrosoft?: () => Promise<void>;
 };
 
 const features = [
@@ -14,7 +16,7 @@ const features = [
   { n: "03", title: "Govern", desc: "Model allowlists, cost alerts, prompt templates. Compliance without slowing teams down." },
 ];
 
-export function LoginView({ signInGitHub, signInGitLab }: LoginViewProps) {
+export function LoginView({ signInGitHub, signInGitLab, signInGoogle, signInMicrosoft }: LoginViewProps) {
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-black)", color: "var(--color-text-primary)", display: "grid", gridTemplateRows: "auto 1fr auto" }}>
 
@@ -74,6 +76,24 @@ export function LoginView({ signInGitHub, signInGitLab }: LoginViewProps) {
                   <button type="submit" style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 24px", background: "transparent", color: "var(--color-text-secondary)", fontSize: 14, border: "1px solid var(--color-border-muted)", borderRadius: 6, cursor: "pointer" }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, opacity: 0.6 }}><path d="m23.546 10.93-.033-.09-3.3-8.6a.85.85 0 0 0-.839-.516.87.87 0 0 0-.529.262.86.86 0 0 0-.264.55l-2.23 6.823H7.65L5.42 2.536a.86.86 0 0 0-.264-.55.87.87 0 0 0-.529-.262.85.85 0 0 0-.839.516l-3.3 8.6-.033.09a6.07 6.07 0 0 0 2.014 7.01l.01.008.028.02 4.98 3.727 2.462 1.863 1.5 1.132a1.01 1.01 0 0 0 1.22 0l1.5-1.132 2.462-1.863 5.008-3.748.012-.01a6.07 6.07 0 0 0 2.015-7.01Z" /></svg>
                     <span>Continue with GitLab</span>
+                    <ArrowRight size={15} strokeWidth={1.5} style={{ marginLeft: "auto", opacity: 0.3 }} />
+                  </button>
+                </form>
+              )}
+              {signInGoogle && (
+                <form action={signInGoogle}>
+                  <button type="submit" style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 24px", background: "transparent", color: "var(--color-text-secondary)", fontSize: 14, border: "1px solid var(--color-border-muted)", borderRadius: 6, cursor: "pointer" }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1Z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23Z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62Z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53Z" fill="#EA4335"/></svg>
+                    <span>Continue with Google</span>
+                    <ArrowRight size={15} strokeWidth={1.5} style={{ marginLeft: "auto", opacity: 0.3 }} />
+                  </button>
+                </form>
+              )}
+              {signInMicrosoft && (
+                <form action={signInMicrosoft}>
+                  <button type="submit" style={{ width: "100%", display: "flex", alignItems: "center", gap: 14, padding: "16px 24px", background: "transparent", color: "var(--color-text-secondary)", fontSize: 14, border: "1px solid var(--color-border-muted)", borderRadius: 6, cursor: "pointer" }}>
+                    <svg width="18" height="18" viewBox="0 0 23 23" style={{ flexShrink: 0 }}><rect x="1" y="1" width="10" height="10" fill="#f25022"/><rect x="12" y="1" width="10" height="10" fill="#7fba00"/><rect x="1" y="12" width="10" height="10" fill="#00a4ef"/><rect x="12" y="12" width="10" height="10" fill="#ffb900"/></svg>
+                    <span>Continue with Microsoft</span>
                     <ArrowRight size={15} strokeWidth={1.5} style={{ marginLeft: "auto", opacity: 0.3 }} />
                   </button>
                 </form>

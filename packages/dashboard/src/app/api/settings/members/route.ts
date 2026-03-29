@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
-import { prisma } from "@airails/shared";
+import { prisma, generateApiKey } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
@@ -31,13 +32,14 @@ export async function GET(request: NextRequest) {
     email: m.engineer.email,
     gitUsername: m.engineer.gitUsername,
     role: m.role,
+    activationStatus: m.activationStatus,
     createdAt: m.createdAt.toISOString(),
   }));
 
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const body = (await request.json()) as {
     productId: string;
@@ -86,11 +88,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Auto-generate a starter API key for the new member
+  const { raw, hashed } = generateApiKey();
+  const starterKey = await prisma.apiKey.create({
+    data: {
+      key: hashed,
+      label: "Starter key (auto-generated)",
+      engineerId: target.id,
+      productId,
+    },
+  });
+
   const newMembership = await prisma.productMembership.create({
     data: {
       productId,
       engineerId: target.id,
       role: role as "OWNER" | "LEAD" | "MEMBER",
+      activationStatus: "KEY_CREATED",
+      starterKeyId: starterKey.id,
     },
     include: { engineer: true },
   });
@@ -102,11 +117,13 @@ export async function POST(request: NextRequest) {
     email: newMembership.engineer.email,
     gitUsername: newMembership.engineer.gitUsername,
     role: newMembership.role,
+    activationStatus: newMembership.activationStatus,
+    starterKey: raw,
     createdAt: newMembership.createdAt.toISOString(),
   });
-}
+});
 
-export async function PATCH(request: NextRequest) {
+export const PATCH = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const body = (await request.json()) as {
     membershipId: string;
@@ -149,9 +166,9 @@ export async function PATCH(request: NextRequest) {
   });
 
   return NextResponse.json({ success: true });
-}
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
@@ -192,4 +209,4 @@ export async function DELETE(request: NextRequest) {
   await prisma.productMembership.delete({ where: { id } });
 
   return NextResponse.json({ success: true });
-}
+});

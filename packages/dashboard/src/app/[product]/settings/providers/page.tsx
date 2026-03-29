@@ -6,13 +6,17 @@ import { api } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartCard } from "@/components/ui/chart-card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useState } from "react";
-import { Cpu } from "lucide-react";
+import { Cpu, Plus } from "lucide-react";
+import { Combobox } from "@/components/ui/combobox";
+import { LITELLM_MODELS } from "@/lib/litellm-models";
 
 export default function ProvidersPage() {
   const { product, isOwner, isLead } = useProduct();
@@ -20,6 +24,43 @@ export default function ProvidersPage() {
   const canManage = isOwner || isLead;
 
   const [toggleTarget, setToggleTarget] = useState<{ model: string; action: "block" | "unblock" } | null>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [modelName, setModelName] = useState("");
+  const [litellmModel, setLitellmModel] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [apiBase, setApiBase] = useState("");
+  const [addError, setAddError] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/api/settings/providers/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product.id,
+          modelName: modelName.trim(),
+          litellmModel: litellmModel.trim(),
+          apiKey: apiKey.trim() || undefined,
+          apiBase: apiBase.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? `Failed (${res.status})`);
+      }
+    },
+    onSuccess: () => {
+      setAddOpen(false);
+      setModelName("");
+      setLitellmModel("");
+      setApiKey("");
+      setApiBase("");
+      setAddError("");
+      queryClient.invalidateQueries({ queryKey: ["settings-providers"] });
+    },
+    onError: (err: Error) => setAddError(err.message),
+  });
 
   const { data: providers, isLoading } = useQuery({
     queryKey: ["settings-providers", product.id],
@@ -68,6 +109,11 @@ export default function ProvidersPage() {
       <PageHeader
         title="Providers"
         description="Manage which AI models are available for this product."
+        actions={canManage ? (
+          <Button size="sm" onClick={() => setAddOpen(true)}>
+            <Plus size={14} strokeWidth={1.5} className="mr-1" /> Add Model
+          </Button>
+        ) : undefined}
       />
 
       {isLoading ? <Skeleton className="h-48" /> : (
@@ -130,6 +176,78 @@ export default function ProvidersPage() {
         onConfirm={() => toggleMutation.mutate()}
         onCancel={() => setToggleTarget(null)}
       />
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Model</DialogTitle>
+            <DialogDescription>
+              Add a new model to LiteLLM. It will be available to all products immediately.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <Input
+              label="Display Name"
+              placeholder="e.g. gpt-4-turbo"
+              value={modelName}
+              onChange={(e) => setModelName(e.target.value)}
+            />
+            <Combobox
+              label="LiteLLM Model ID"
+              placeholder="Search models... (e.g. gpt-4o, claude, llama)"
+              options={LITELLM_MODELS}
+              value={litellmModel}
+              onChange={(val) => {
+                setLitellmModel(val);
+                if (!modelName.trim()) {
+                  const match = LITELLM_MODELS.find((m) => m.value === val);
+                  if (match) setModelName(match.label.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-xs text-text-tertiary hover:text-text-secondary transition-colors text-left"
+            >
+              {showAdvanced ? "Hide advanced options" : "Advanced options (custom API key, endpoint)"}
+            </button>
+            {showAdvanced && (
+              <div className="space-y-4 border-t border-border-subtle pt-4">
+                <Input
+                  label="API Key"
+                  placeholder="Uses env var if blank"
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                />
+                <Input
+                  label="API Base URL"
+                  placeholder="e.g. https://custom-endpoint.com/v1"
+                  value={apiBase}
+                  onChange={(e) => setApiBase(e.target.value)}
+                />
+                <p className="text-xs text-text-tertiary">
+                  Only needed for custom deployments (Azure, self-hosted). Most providers use the API key from your <code className="font-mono">.env</code> automatically.
+                </p>
+              </div>
+            )}
+            {addError && (
+              <p className="text-sm text-danger">{addError}</p>
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => addMutation.mutate()}
+              disabled={!modelName.trim() || !litellmModel.trim() || addMutation.isPending}
+              loading={addMutation.isPending}
+            >
+              Add Model
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

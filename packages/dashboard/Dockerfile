@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:lts-alpine AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 COPY package.json package-lock.json ./
@@ -18,7 +18,7 @@ ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholde
 ENV AUTH_TRUST_HOST=true
 RUN npm run build --workspace=packages/dashboard
 
-FROM node:22-alpine
+FROM node:lts-alpine
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production

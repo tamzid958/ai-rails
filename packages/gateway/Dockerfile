@@ -1,4 +1,4 @@
-FROM node:22-alpine AS builder
+FROM node:lts-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
@@ -15,7 +15,7 @@ COPY packages/gateway/ packages/gateway/
 RUN npm run build --workspace=packages/shared
 RUN npm run build --workspace=packages/gateway
 
-FROM node:22-alpine
+FROM node:lts-alpine
 WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && adduser -S airails -u 1001
 COPY --from=builder /app/packages/gateway/dist ./dist

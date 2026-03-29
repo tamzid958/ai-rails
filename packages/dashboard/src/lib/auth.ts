@@ -1,9 +1,21 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
 import GitLab from "next-auth/providers/gitlab";
+import Google from "next-auth/providers/google";
+import MicrosoftEntraId from "next-auth/providers/microsoft-entra-id";
 import { prisma } from "@airails/shared";
 import { redirect } from "next/navigation";
 import type {} from "./auth-types";
+
+const ALLOWED_DOMAINS = process.env.ALLOWED_EMAIL_DOMAINS
+  ? process.env.ALLOWED_EMAIL_DOMAINS.split(",").map((d) => d.trim().toLowerCase())
+  : [];
+
+function isEmailAllowed(email: string): boolean {
+  if (ALLOWED_DOMAINS.length === 0) return true;
+  const domain = email.split("@")[1]?.toLowerCase();
+  return !!domain && ALLOWED_DOMAINS.includes(domain);
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -15,10 +27,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       clientId: process.env.GITLAB_CLIENT_ID,
       clientSecret: process.env.GITLAB_CLIENT_SECRET,
     }),
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    }),
+    MicrosoftEntraId({
+      clientId: process.env.MICROSOFT_CLIENT_ID,
+      clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+      issuer: `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID ?? "common"}/v2.0`,
+    }),
   ],
   session: { strategy: "jwt" },
   pages: { signIn: "/" },
   callbacks: {
+    async signIn({ user }) {
+      if (!user.email) return false;
+      if (!isEmailAllowed(user.email)) return "/unauthorized?reason=domain";
+      return true;
+    },
     async jwt({ token, account, profile }) {
       if (!account) return token;
 
@@ -28,7 +54,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const gitUsername =
         account.provider === "github"
           ? (profile as Record<string, unknown>)?.login as string | undefined
-          : (profile as Record<string, unknown>)?.username as string | undefined;
+          : account.provider === "gitlab"
+            ? (profile as Record<string, unknown>)?.username as string | undefined
+            : undefined;
 
       let engineer = await prisma.engineer.findUnique({
         where: { email },

@@ -239,7 +239,7 @@ export default function PromptAuditPage() {
     placeholderData: (prev) => prev,
   });
 
-  const items = data?.items ?? [];
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const stats = data?.stats ?? {};
   const totalPages = Math.ceil(total / pageSize);

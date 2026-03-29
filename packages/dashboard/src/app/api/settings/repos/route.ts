@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
@@ -33,9 +34,9 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const body = (await request.json()) as {
     productId: string;
@@ -88,9 +89,9 @@ export async function POST(request: NextRequest) {
     lastEventAt: repo.lastEventAt?.toISOString() ?? null,
     createdAt: repo.createdAt.toISOString(),
   });
-}
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
@@ -119,4 +120,4 @@ export async function DELETE(request: NextRequest) {
   await prisma.repo.delete({ where: { id } });
 
   return NextResponse.json({ success: true });
-}
+});

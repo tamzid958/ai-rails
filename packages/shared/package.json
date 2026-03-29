@@ -28,7 +28,7 @@
     "dev": "tsc --watch",
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
-    "test:unit": "vitest run src/__tests__/utils.test.ts src/__tests__/schemas.test.ts",
+    "test:unit": "vitest run src/__tests__ --exclude src/__tests__/product-context.test.ts",
     "test:integration": "vitest run src/__tests__/product-context.test.ts"
   },
   "dependencies": {

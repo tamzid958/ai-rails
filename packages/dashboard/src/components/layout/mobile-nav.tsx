@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { SidebarNav } from "./sidebar";
 
-type MobileNavProps = { productSlug: string; canManageTeam: boolean };
+type MobileNavProps = { productSlug: string; canManageTeam: boolean; canCreateProduct?: boolean };
 
 export function MobileNav({ productSlug, canManageTeam }: MobileNavProps) {
   const [isOpen, setIsOpen] = useState(false);

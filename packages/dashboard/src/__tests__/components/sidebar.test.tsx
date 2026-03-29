@@ -7,22 +7,23 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("Sidebar", () => {
-  it("should_hide_TEAM_section_for_MEMBER", () => {
+  it("should_hide_TEAM_and_SETTINGS_sections_for_MEMBER", () => {
     render(
       <SidebarNav productSlug="test-product" canManageTeam={false} />,
     );
 
     expect(screen.queryByText("Team")).not.toBeInTheDocument();
+    expect(screen.queryByText("Settings")).not.toBeInTheDocument();
     expect(screen.getByText("My Dashboard")).toBeInTheDocument();
-    expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 
-  it("should_show_TEAM_section_for_LEAD", () => {
+  it("should_show_TEAM_and_SETTINGS_sections_for_LEAD", () => {
     render(
       <SidebarNav productSlug="test-product" canManageTeam={true} />,
     );
 
     expect(screen.getByText("Team")).toBeInTheDocument();
+    expect(screen.getByText("Settings")).toBeInTheDocument();
     expect(screen.getByText("My Dashboard")).toBeInTheDocument();
   });
 

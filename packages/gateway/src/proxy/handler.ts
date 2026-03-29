@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import { enforceModelAllowlist } from "../enrichment/model-guard.js";
+import { enforceSpendCap } from "../enrichment/policy-guard.js";
 import { injectPrompt } from "../enrichment/prompt.js";
 import { logGatewayActivity } from "../logging/logger.js";
 import { StreamCollector } from "./stream-collector.js";
@@ -20,9 +21,12 @@ async function forwardToLiteLLM(
           : {}),
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(30_000),
     });
   } catch {
-    throw { statusCode: 502, message: "LiteLLM service unavailable" };
+    const err = new Error("LiteLLM service unavailable");
+    (err as Error & { statusCode: number }).statusCode = 502;
+    throw err;
   }
 }
 
@@ -34,6 +38,7 @@ export async function handleChatCompletions(
   const rawBody = request.body as ChatCompletionRequest;
 
   await enforceModelAllowlist(context.productId, rawBody.model);
+  await enforceSpendCap(context);
 
   const { body, templateId, isOverride } = await injectPrompt(
     rawBody,
@@ -127,8 +132,34 @@ export async function handleEmbeddings(
   request: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
+  const context = request.productContext;
   const body = request.body as Record<string, unknown>;
+  const model = typeof body.model === "string" ? body.model : "unknown";
+
+  await enforceModelAllowlist(context.productId, model);
+  await enforceSpendCap(context);
+
+  const startTime = Date.now();
   const response = await forwardToLiteLLM("/v1/embeddings", body);
-  const data = await response.json();
+  const data = (await response.json()) as {
+    usage?: { prompt_tokens?: number; total_tokens?: number };
+  };
+  const latencyMs = Date.now() - startTime;
+
+  // Non-blocking logging — reuse chat completion logger with minimal adapter
+  logGatewayActivity({
+    context,
+    request: { model, messages: [], ...body },
+    response: {
+      model,
+      usage: {
+        prompt_tokens: data.usage?.prompt_tokens,
+        total_tokens: data.usage?.total_tokens,
+      },
+    },
+    latencyMs,
+    headers: request.headers,
+  }).catch(() => {});
+
   reply.status(response.status).send(data);
 }

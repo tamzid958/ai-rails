@@ -2,8 +2,13 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    tags:
-      - '*'
+    branches: [main]
+    paths:
+      - "docs/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
 
 permissions:
   contents: read
@@ -28,6 +33,7 @@ jobs:
 
   deploy:
     needs: build
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

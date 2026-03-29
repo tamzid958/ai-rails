@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma, generateApiKey } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
@@ -32,9 +33,9 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const body = (await request.json()) as { productId: string; label: string };
   const { productId, label } = body;
@@ -49,8 +50,8 @@ export async function POST(request: NextRequest) {
   const membership = await prisma.productMembership.findUnique({
     where: { productId_engineerId: { productId, engineerId: engineer.id } },
   });
-  if (!membership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!membership || membership.role === "MEMBER") {
+    return NextResponse.json({ error: "Requires LEAD or OWNER role" }, { status: 403 });
   }
 
   const { raw, hashed } = generateApiKey();
@@ -65,9 +66,9 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ id: key.id, rawKey: raw });
-}
+});
 
-export async function DELETE(request: NextRequest) {
+export const DELETE = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
@@ -89,8 +90,8 @@ export async function DELETE(request: NextRequest) {
       },
     },
   });
-  if (!membership) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!membership || membership.role === "MEMBER") {
+    return NextResponse.json({ error: "Requires LEAD or OWNER role" }, { status: 403 });
   }
 
   await prisma.apiKey.update({
@@ -99,4 +100,4 @@ export async function DELETE(request: NextRequest) {
   });
 
   return NextResponse.json({ success: true });
-}
+});

@@ -162,7 +162,7 @@ export default function GuidePage() {
           <P>The AIRAILS CLI is used for commit tagging, IDE configuration, and managing your setup.</P>
 
           <H3>Install</H3>
-          <Code label="Terminal">{`npm install -g @airails/cli`}</Code>
+          <Code label="Terminal">{`npm install -g @airails/cli --registry https://npm.pkg.github.com`}</Code>
 
           <H3>Initialize in your repo</H3>
           <Code label="Terminal">{`cd your-project
@@ -217,7 +217,7 @@ OPENAI_API_KEY=airails_sk_xxxxxxxxxxxx`}</Code>
           <H3>Option B — Commit Tagging</H3>
           <P>Lightweight alternative if you can&apos;t proxy through the gateway.</P>
 
-          <Code label="Install">{`npm install -g @airails/cli`}</Code>
+          <Code label="Install">{`npm install -g @airails/cli --registry https://npm.pkg.github.com`}</Code>
 
           <Code label="Usage">{`# CLI wrapper
 airails commit --ai cursor -m "feat: add login"
@@ -234,26 +234,9 @@ airails tag --tool copilot --branch feature/auth`}</Code>
 
           {/* ─── Dashboard ─── */}
           <H2 id="dashboard">Dashboard</H2>
-          <P>Two views, designed for different audiences.</P>
 
-          <H3>Engineer View</H3>
-          <P>Your personal AI usage. Available to all team members.</P>
-
-          <ListItem title="Overview">Activity timeline, stat cards, tool distribution chart, recent activity table with pagination.</ListItem>
-          <ListItem title="Usage">Token consumption, cost breakdown by model and task type. Requires gateway data.</ListItem>
-          <ListItem title="Prompts">Your prompt templates and personal overrides with per-template acceptance rates.</ListItem>
-          <ListItem title="Effectiveness">Acceptance, revision, and rejection rates. Compares your performance to team average.</ListItem>
-
-          <H3>Team View</H3>
-          <P>Aggregated metrics. Visible to <Pill color="#064e3b">LEAD</Pill> and <Pill color="#4c1d95">OWNER</Pill> roles.</P>
-
-          <ListItem title="Overview">Team-wide trends, data coverage breakdown, AI-powered insights with pagination.</ListItem>
-          <ListItem title="Engineers">Compare individuals — activity, acceptance rate, cost, tools used. Sortable columns.</ListItem>
-          <ListItem title="Costs">Spending by engineer, model, and task type. Threshold alerts flag overspending.</ListItem>
-          <ListItem title="Drift">Configuration drift detection — model violations, stale overrides, capture gaps. Scored per engineer.</ListItem>
-          <ListItem title="Audit">Immutable changelog of every prompt template change with before/after diffs and acceptance rate correlation.</ListItem>
-          <ListItem title="Outcomes">PR outcomes correlated with AI usage. Filter by status and data richness.</ListItem>
-          <ListItem title="Prompts">Prompt registry — review overrides, promote top performers to base.</ListItem>
+          <P><S>Engineer View</S> — your personal AI usage (all roles): overview, usage, prompts, effectiveness.</P>
+          <P><S>Team View</S> — aggregated metrics (<Pill color="#064e3b">LEAD</Pill> <Pill color="#4c1d95">OWNER</Pill>): engineers, costs, drift, audit, outcomes, prompt registry.</P>
 
           <Divider />
 
@@ -308,24 +291,12 @@ Trigger: Merge request events`}</Code>
           <P>By default all models are available. Block or enable specific models in <S>Settings → Providers</S>, or set an allowlist in <S>Product Settings</S>.</P>
 
           <H3>Adding Models</H3>
-          <P>AIRAILS uses LiteLLM as its router. Add models to the config:</P>
+          <P>Add models directly from the dashboard — no config files or restarts needed.</P>
+          <P><S>Step 1.</S> Go to <S>Settings → Providers</S> and click <S>Add Model</S></P>
+          <P><S>Step 2.</S> Search for a model (supports OpenAI, Anthropic, Google, Mistral, Ollama, Groq, and more)</P>
+          <P><S>Step 3.</S> Click <S>Add Model</S> — it&apos;s live immediately</P>
 
-          <Code label="litellm/config.yaml">{`model_list:
-  - model_name: gpt-4o
-    litellm_params:
-      model: openai/gpt-4o
-
-  - model_name: claude-sonnet
-    litellm_params:
-      model: anthropic/claude-sonnet-4-6-20250620
-
-  # Add your own
-  - model_name: my-model
-    litellm_params:
-      model: openai/my-model
-      api_base: https://my-provider.com/v1`}</Code>
-
-          <Code label="Apply changes">{`docker compose restart litellm gateway`}</Code>
+          <Callout type="tip">For custom endpoints or self-hosted models, expand &quot;Advanced options&quot; in the Add Model dialog to set a custom API key or base URL.</Callout>
 
           <Divider />
 
@@ -333,12 +304,23 @@ Trigger: Merge request events`}</Code>
           <H2 id="costs">Cost Management</H2>
           <P>Monitor and control AI spending.</P>
 
-          <P>Set thresholds in <S>Product Settings → Cost Alerts</S>:</P>
+          <H3>Cost Alerts</H3>
+          <P>Set alert thresholds in <S>Product Settings</S>. When exceeded, alerts appear in the dashboard and are delivered to your configured webhook (Slack, Teams, etc.).</P>
 
           <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 8 }}>
-            <ListItem icon={DollarSign} title="Daily threshold">Total product-wide spend per day. Flagged in the Cost Center when exceeded.</ListItem>
-            <ListItem icon={DollarSign} title="Per-engineer daily">Individual spend per day. Engineers exceeding this show a red indicator.</ListItem>
+            <ListItem icon={DollarSign} title="Daily alert threshold">Total product-wide spend per day. Flagged in the Cost Center when exceeded.</ListItem>
+            <ListItem icon={DollarSign} title="Per-engineer alert">Individual spend per day. Engineers exceeding this show a red indicator.</ListItem>
           </div>
+
+          <H3>Spend Caps (Hard Limits)</H3>
+          <P>Unlike alerts, spend caps <S>block gateway requests</S> when exceeded. Set them in <S>Product Settings</S>:</P>
+
+          <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 8 }}>
+            <ListItem icon={DollarSign} title="Daily spend cap">Per-engineer daily limit. Gateway returns 403 when reached.</ListItem>
+            <ListItem icon={DollarSign} title="Monthly spend cap">Per-engineer monthly limit. Prevents runaway costs.</ListItem>
+          </div>
+
+          <Callout type="warning">Spend caps hard-block requests. Engineers see a clear error message with the amount exceeded. Set caps above your alert thresholds to catch issues before blocking.</Callout>
 
           <Callout type="info">Cost data requires gateway capture. Commit-tagged sessions don&apos;t include cost info.</Callout>
 
@@ -435,26 +417,9 @@ Do not suggest cosmetic changes or add unnecessary comments.`}</Code>
             ))}
           </div>
 
-          <H3>Dashboard Columns</H3>
-          <P>The drift table shows each engineer with these columns:</P>
+          <P>The drift table scores each engineer (NONE → LOW → MEDIUM → HIGH) based on model violations, stale overrides, and missing gateway data. Expand any row for details.</P>
 
-          <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 4 }}>
-            <ListItem title="Drift">Severity badge — NONE, LOW, MEDIUM, or HIGH.</ListItem>
-            <ListItem title="Models">Count of non-allowed models, or &quot;OK&quot; if compliant.</ListItem>
-            <ListItem title="Templates">Stale override count, or ratio like 2/5 (overrides / total bases).</ListItem>
-            <ListItem title="Gateway">Icon showing whether the engineer has gateway activity.</ListItem>
-            <ListItem title="Last Sync">Time since the engineer&apos;s last <Mono>airails sync</Mono> event.</ListItem>
-            <ListItem title="Details">Expandable — every drift reason as human-readable text.</ListItem>
-          </div>
-
-          <H3>Resolving Drift</H3>
-          <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 4 }}>
-            <ListItem title="Model drift">Engineer switches to an allowed model, or a lead updates the allowlist in Product Settings.</ListItem>
-            <ListItem title="Stale overrides">Engineer runs <Mono>airails sync</Mono> or updates their override in the dashboard to incorporate base template changes.</ListItem>
-            <ListItem title="No gateway data">Configure the gateway proxy so AI requests are captured with full token and cost data.</ListItem>
-          </div>
-
-          <Callout type="tip">Run a drift check after promoting a template or changing the model allowlist. It shows who needs to update.</Callout>
+          <P><S>To resolve:</S> switch to allowed models, run <Mono>airails sync</Mono> to update overrides, or configure the gateway proxy for full capture.</P>
 
           <Divider />
 
@@ -480,18 +445,7 @@ Do not suggest cosmetic changes or add unnecessary comments.`}</Code>
             ))}
           </div>
 
-          <H3>Using the Audit Page</H3>
-          <P>Go to <S>Team → Audit</S> to see the full log. Available to LEADs and OWNERs.</P>
-
-          <div style={{ margin: "14px 0", display: "flex", flexDirection: "column", gap: 4 }}>
-            <ListItem title="Timeline table">Every event with timestamp, engineer name, action badge, template name, task type, and version number.</ListItem>
-            <ListItem title="Diff view">Click any row to expand a side-by-side comparison. Changed lines are highlighted in red (removed) and green (added).</ListItem>
-            <ListItem title="Filter by action">Use the dropdown to narrow the log — e.g., show only promotions or updates.</ListItem>
-            <ListItem title="Acceptance rate">Each row shows the template&apos;s current acceptance rate, so you can correlate prompt changes with quality outcomes.</ListItem>
-            <ListItem title="Pagination">Load older entries with cursor-based pagination without performance issues.</ListItem>
-          </div>
-
-          <Callout type="info">Audit logs are immutable and fire-and-forget — they never block or fail the original prompt operation. If a log write fails, the user&apos;s action still succeeds.</Callout>
+          <P><S>Team → Audit</S> — immutable changelog of every prompt change. Click any row for a side-by-side diff. Filter by action type. Each entry shows the template&apos;s acceptance rate so you can correlate changes with quality.</P>
 
           <H3>Common Workflows</H3>
 

@@ -34,19 +34,47 @@ curl http://localhost:8081/health   # webhook
 curl http://localhost:3000           # dashboard
 ```
 
+## Authentication Setup
+
+AIRails supports four OAuth providers. Configure whichever your company uses — only providers with credentials set will appear on the login page.
+
+| Provider | Env Vars | Notes |
+|----------|----------|-------|
+| GitHub | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Auto-links git username |
+| GitLab | `GITLAB_CLIENT_ID`, `GITLAB_CLIENT_SECRET` | Auto-links git username |
+| Google | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google Workspace / personal |
+| Microsoft | `MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID` | Azure AD / Entra ID |
+
+### Access Control
+
+Restrict who can access your instance:
+
+```bash
+# Only allow company email domains (comma-separated)
+ALLOWED_EMAIL_DOMAINS=company.com,contractor.io
+
+# Require users to be pre-added to a product before they can access
+INVITE_ONLY=true
+```
+
+When `INVITE_ONLY=true`, authenticated users without a product membership see a "Waiting for invitation" page. A team lead must add them to a product first.
+
+Set `PRODUCT_CREATION=owners` to restrict product creation to existing product owners only. The first user on a fresh instance can always create the first product.
+
 ## Creating Your First Product
 
 1. Open the dashboard at `http://localhost:3000`
-2. Sign in with GitHub or GitLab OAuth
-3. Create a product (e.g., "Payments API")
-4. Add your repositories to the product
-5. Invite team members
+2. Sign in with your configured OAuth provider — first user on a fresh instance becomes the initial owner
+3. Click "Create Product" (e.g., "Payments API")
+4. Add your repositories in Settings → Repos
+5. Add models in Settings → Providers (search from 60+ LiteLLM-supported models)
+6. Invite team members in Settings → Members — each member gets an auto-generated API key
 
 ## CLI Setup
 
 ```bash
-# Install the CLI
-npm install -g @airails/cli
+# Install the CLI (published to GitHub Packages)
+npm install -g @airails/cli --registry https://npm.pkg.github.com
 
 # Initialize in your repo
 cd your-project

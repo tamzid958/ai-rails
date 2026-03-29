@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
 function calculateTrend(current: number, previous: number): number {
   if (previous === 0) return current > 0 ? 100 : 0;
   return Math.round(((current - previous) / previous) * 100);
 }
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
@@ -125,4 +126,4 @@ export async function GET(request: NextRequest) {
     monthlyCost: Math.round(currentCostVal * 100) / 100,
     monthlyCostTrend: calculateTrend(currentCostVal, previousCostVal),
   });
-}
+});

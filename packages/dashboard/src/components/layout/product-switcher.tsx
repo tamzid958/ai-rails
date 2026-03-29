@@ -21,9 +21,10 @@ type ProductItem = {
 type ProductSwitcherProps = {
   products: ProductItem[];
   currentSlug: string;
+  canCreateProduct?: boolean;
 };
 
-function ProductSwitcher({ products, currentSlug }: ProductSwitcherProps) {
+function ProductSwitcher({ products, currentSlug, canCreateProduct = true }: ProductSwitcherProps) {
   const router = useRouter();
   const current = products.find((p) => p.slug === currentSlug);
 
@@ -46,13 +47,17 @@ function ProductSwitcher({ products, currentSlug }: ProductSwitcherProps) {
             <Badge variant="outline">{p.role}</Badge>
           </DropdownMenuItem>
         ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/products/create" className="flex items-center gap-2">
-            <Plus size={14} strokeWidth={1.5} />
-            Create Product
-          </Link>
-        </DropdownMenuItem>
+        {canCreateProduct && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/products/create" className="flex items-center gap-2">
+                <Plus size={14} strokeWidth={1.5} />
+                Create Product
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
