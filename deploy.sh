@@ -4,6 +4,9 @@ set -euo pipefail
 # ─────────────────────────────────────────────────────────────
 #  AIRails — Production Deploy Script
 #  Usage: ./deploy.sh
+#
+#  Uses .env.example as the single source of truth for all
+#  environment variables. Copies it to .env and fills in values.
 # ─────────────────────────────────────────────────────────────
 
 COMPOSE_FILES="-f docker-compose.yml -f docker-compose.prod.yml"
@@ -73,6 +76,16 @@ generate_secret() {
   openssl rand -hex 32 2>/dev/null || head -c 64 /dev/urandom | od -An -tx1 | tr -d ' \n'
 }
 
+# Set a variable in .env (replaces the value after KEY=)
+set_env() {
+  local key="$1"
+  local value="$2"
+  # Escape sed special characters in value
+  local escaped_value
+  escaped_value=$(printf '%s' "$value" | sed 's/[&/\]/\\&/g')
+  sed -i.bak "s|^${key}=.*|${key}=${escaped_value}|" "$ENV_FILE"
+}
+
 TOTAL_STEPS=7
 
 # ─────────────────────────────────────────────────────────────
@@ -108,6 +121,12 @@ if ! docker info &>/dev/null 2>&1; then
 fi
 success "Docker daemon is running"
 
+if [ ! -f "$ENV_EXAMPLE" ]; then
+  error ".env.example not found — cannot continue"
+  exit 1
+fi
+success ".env.example found"
+
 if [ ${#missing[@]} -gt 0 ]; then
   error "Missing required tools: ${missing[*]}"
   echo -e "\n  Install them and re-run this script."
@@ -129,10 +148,14 @@ if [ -f "$ENV_FILE" ]; then
   fi
 else
   CONFIGURE_ENV=true
-  info "No .env found — will create one"
+  info "No .env found — will create from .env.example"
 fi
 
 if [ "$CONFIGURE_ENV" = true ]; then
+  # Copy .env.example as the base — single source of truth
+  cp "$ENV_EXAMPLE" "$ENV_FILE"
+  success "Copied .env.example → .env"
+
   echo ""
   info "Configure your deployment (press Enter to accept defaults):"
   echo ""
@@ -140,6 +163,7 @@ if [ "$CONFIGURE_ENV" = true ]; then
   # ── Database ──
   echo -e "  ${BOLD}Database${NC}"
   prompt_value DB_URL "PostgreSQL connection URL" "postgresql://airails:changeme@postgres:5432/airails"
+  set_env "DATABASE_URL" "$DB_URL"
 
   # ── Domain / URLs ──
   echo ""
@@ -158,6 +182,11 @@ if [ "$CONFIGURE_ENV" = true ]; then
   prompt_value GATEWAY_URL "Gateway URL" "$DEFAULT_GATEWAY_URL"
   prompt_value CORS_VAL "CORS origin (dashboard URL)" "$DEFAULT_CORS"
 
+  set_env "NEXT_PUBLIC_DASHBOARD_URL" "$DASHBOARD_URL"
+  set_env "NEXT_PUBLIC_GATEWAY_URL" "$GATEWAY_URL"
+  set_env "AUTH_URL" "$DASHBOARD_URL"
+  set_env "CORS_ORIGIN" "$CORS_VAL"
+
   # ── Secrets (auto-generate) ──
   echo ""
   echo -e "  ${BOLD}Secrets${NC} ${YELLOW}(auto-generated if left empty)${NC}"
@@ -171,37 +200,49 @@ if [ "$CONFIGURE_ENV" = true ]; then
   prompt_value WEBHOOK_SECRET_VAL "AIRAILS_WEBHOOK_SECRET" "$DEFAULT_WEBHOOK_SECRET" true
   prompt_value LITELLM_KEY_VAL "LITELLM_MASTER_KEY" "$DEFAULT_LITELLM_KEY" true
 
+  set_env "AIRAILS_SECRET" "$AIRAILS_SECRET_VAL"
+  set_env "AUTH_SECRET" "$AUTH_SECRET_VAL"
+  set_env "AIRAILS_WEBHOOK_SECRET" "$WEBHOOK_SECRET_VAL"
+  set_env "LITELLM_MASTER_KEY" "$LITELLM_KEY_VAL"
+
   # ── LLM API Keys ──
   echo ""
   echo -e "  ${BOLD}LLM Provider Keys${NC} ${YELLOW}(at least one recommended)${NC}"
   prompt_value OPENAI_KEY "OpenAI API key" "" true
   prompt_value ANTHROPIC_KEY "Anthropic API key" "" true
 
+  set_env "OPENAI_API_KEY" "$OPENAI_KEY"
+  set_env "ANTHROPIC_API_KEY" "$ANTHROPIC_KEY"
+
   # ── OAuth (optional) ──
   echo ""
   echo -e "  ${BOLD}OAuth Providers${NC} ${YELLOW}(optional — press Enter to skip)${NC}"
 
-  GITHUB_CID="" GITHUB_CSEC=""
-  GITLAB_CID="" GITLAB_CSEC=""
-  GOOGLE_CID="" GOOGLE_CSEC=""
-  MS_CID="" MS_CSEC="" MS_TID="common"
-
   if prompt_yes_no "Configure GitHub OAuth?" "n"; then
     prompt_value GITHUB_CID "GitHub Client ID" ""
     prompt_value GITHUB_CSEC "GitHub Client Secret" "" true
+    set_env "GITHUB_CLIENT_ID" "$GITHUB_CID"
+    set_env "GITHUB_CLIENT_SECRET" "$GITHUB_CSEC"
   fi
   if prompt_yes_no "Configure GitLab OAuth?" "n"; then
     prompt_value GITLAB_CID "GitLab Client ID" ""
     prompt_value GITLAB_CSEC "GitLab Client Secret" "" true
+    set_env "GITLAB_CLIENT_ID" "$GITLAB_CID"
+    set_env "GITLAB_CLIENT_SECRET" "$GITLAB_CSEC"
   fi
   if prompt_yes_no "Configure Google OAuth?" "n"; then
     prompt_value GOOGLE_CID "Google Client ID" ""
     prompt_value GOOGLE_CSEC "Google Client Secret" "" true
+    set_env "GOOGLE_CLIENT_ID" "$GOOGLE_CID"
+    set_env "GOOGLE_CLIENT_SECRET" "$GOOGLE_CSEC"
   fi
   if prompt_yes_no "Configure Microsoft OAuth?" "n"; then
     prompt_value MS_CID "Microsoft Client ID" ""
     prompt_value MS_CSEC "Microsoft Client Secret" "" true
     prompt_value MS_TID "Microsoft Tenant ID" "common"
+    set_env "MICROSOFT_CLIENT_ID" "$MS_CID"
+    set_env "MICROSOFT_CLIENT_SECRET" "$MS_CSEC"
+    set_env "MICROSOFT_TENANT_ID" "$MS_TID"
   fi
 
   # ── Access Control ──
@@ -211,73 +252,23 @@ if [ "$CONFIGURE_ENV" = true ]; then
   prompt_value INVITE_ONLY_VAL "Invite-only mode (true/false)" "true"
   prompt_value PRODUCT_CREATION_VAL "Who can create products (anyone/owners)" "owners"
 
+  set_env "ALLOWED_EMAIL_DOMAINS" "$EMAIL_DOMAINS"
+  set_env "INVITE_ONLY" "$INVITE_ONLY_VAL"
+  set_env "PRODUCT_CREATION" "$PRODUCT_CREATION_VAL"
+
   # ── Logging ──
   echo ""
   echo -e "  ${BOLD}Logging${NC}"
   prompt_value LOG_LEVEL_VAL "Log level (debug/info/warn/error)" "info"
 
-  # ── Write .env ──
-  cat > "$ENV_FILE" <<EOF
-# Database
-DATABASE_URL=$DB_URL
+  set_env "LOG_LEVEL" "$LOG_LEVEL_VAL"
+  set_env "LOG_PROMPTS" "false"
+  set_env "LOG_RESPONSES" "false"
 
-# Redis
-REDIS_URL=redis://redis:6379
+  # Clean up sed backup files
+  rm -f "${ENV_FILE}.bak"
 
-# Gateway
-AIRAILS_SECRET=$AIRAILS_SECRET_VAL
-AIRAILS_PORT=8080
-LITELLM_URL=http://litellm:4000
-
-# LiteLLM
-LITELLM_MASTER_KEY=$LITELLM_KEY_VAL
-OPENAI_API_KEY=$OPENAI_KEY
-ANTHROPIC_API_KEY=$ANTHROPIC_KEY
-
-# Dashboard
-NEXT_PUBLIC_GATEWAY_URL=$GATEWAY_URL
-NEXT_PUBLIC_DASHBOARD_URL=$DASHBOARD_URL
-
-# OAuth — GitHub
-GITHUB_CLIENT_ID=$GITHUB_CID
-GITHUB_CLIENT_SECRET=$GITHUB_CSEC
-
-# OAuth — GitLab
-GITLAB_CLIENT_ID=$GITLAB_CID
-GITLAB_CLIENT_SECRET=$GITLAB_CSEC
-
-# OAuth — Google
-GOOGLE_CLIENT_ID=$GOOGLE_CID
-GOOGLE_CLIENT_SECRET=$GOOGLE_CSEC
-
-# OAuth — Microsoft (Entra ID / Azure AD)
-MICROSOFT_CLIENT_ID=$MS_CID
-MICROSOFT_CLIENT_SECRET=$MS_CSEC
-MICROSOFT_TENANT_ID=$MS_TID
-
-# NextAuth
-AUTH_SECRET=$AUTH_SECRET_VAL
-AUTH_TRUST_HOST=true
-
-# Access Control
-ALLOWED_EMAIL_DOMAINS=$EMAIL_DOMAINS
-INVITE_ONLY=$INVITE_ONLY_VAL
-PRODUCT_CREATION=$PRODUCT_CREATION_VAL
-
-# Webhook
-AIRAILS_WEBHOOK_SECRET=$WEBHOOK_SECRET_VAL
-WEBHOOK_PORT=8081
-
-# Production
-CORS_ORIGIN=$CORS_VAL
-
-# Logging
-LOG_LEVEL=$LOG_LEVEL_VAL
-LOG_PROMPTS=false
-LOG_RESPONSES=false
-EOF
-
-  success ".env written"
+  success ".env configured"
 fi
 
 # ── Step 3: Validate required vars ──────────────────────────
