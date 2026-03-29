@@ -68,6 +68,7 @@ services:
       - NEXT_PUBLIC_GATEWAY_URL=${NEXT_PUBLIC_GATEWAY_URL:-http://localhost:8080}
       - NEXT_PUBLIC_DASHBOARD_URL=${NEXT_PUBLIC_DASHBOARD_URL:-http://localhost:3000}
       - DATABASE_URL=${DATABASE_URL}
+      - AIRAILS_SECRET=${AIRAILS_SECRET:-change-this-to-a-random-secret}
       - AUTH_SECRET=${AUTH_SECRET:-change-this-to-a-random-secret}
       - AUTH_TRUST_HOST=${AUTH_TRUST_HOST:-true}
       - AUTH_URL=${NEXT_PUBLIC_DASHBOARD_URL:-http://localhost:3000}
