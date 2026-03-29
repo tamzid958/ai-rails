@@ -85,3 +85,16 @@ export async function getEngineer() {
 
   return engineer;
 }
+
+/** API-safe variant — returns null instead of calling redirect() */
+export async function getEngineerOrNull() {
+  const session = await auth();
+
+  if (!session?.user?.engineerId) {
+    return null;
+  }
+
+  return prisma.engineer.findUnique({
+    where: { id: session.user.engineerId },
+  });
+}
