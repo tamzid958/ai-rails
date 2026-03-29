@@ -20,6 +20,7 @@ CREATE TABLE "Product" (
     "defaultModel" TEXT,
     "costAlertDaily" DOUBLE PRECISION,
     "costAlertEngineer" DOUBLE PRECISION,
+    "webhookSecret" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -119,10 +120,30 @@ CREATE TABLE "PromptTemplate" (
     "isBase" BOOLEAN NOT NULL DEFAULT true,
     "parentId" TEXT,
     "engineerId" TEXT,
+    "usageCount" INTEGER NOT NULL DEFAULT 0,
+    "acceptanceRate" DOUBLE PRECISION,
+    "revisionRate" DOUBLE PRECISION,
+    "rejectionRate" DOUBLE PRECISION,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "PromptTemplate_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "PromptAuditLog" (
+    "id" TEXT NOT NULL,
+    "productId" TEXT NOT NULL,
+    "promptTemplateId" TEXT NOT NULL,
+    "engineerId" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "version" INTEGER NOT NULL,
+    "contentBefore" TEXT,
+    "contentAfter" TEXT NOT NULL,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "PromptAuditLog_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -142,6 +163,7 @@ CREATE TABLE "PrEvent" (
     "linesRemoved" INTEGER,
     "filesChanged" INTEGER,
     "aiActivitiesCount" INTEGER NOT NULL DEFAULT 0,
+    "totalTokensUsed" INTEGER NOT NULL DEFAULT 0,
     "aiToolsUsed" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "dataRichness" "DataRichness" NOT NULL DEFAULT 'NONE',
     "openedAt" TIMESTAMP(3),
@@ -238,6 +260,15 @@ CREATE INDEX "PromptTemplate_productId_taskType_idx" ON "PromptTemplate"("produc
 CREATE UNIQUE INDEX "PromptTemplate_productId_taskType_engineerId_isBase_key" ON "PromptTemplate"("productId", "taskType", "engineerId", "isBase");
 
 -- CreateIndex
+CREATE INDEX "PromptAuditLog_promptTemplateId_version_idx" ON "PromptAuditLog"("promptTemplateId", "version");
+
+-- CreateIndex
+CREATE INDEX "PromptAuditLog_productId_createdAt_idx" ON "PromptAuditLog"("productId", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "PromptAuditLog_productId_engineerId_idx" ON "PromptAuditLog"("productId", "engineerId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "PrEvent_externalId_key" ON "PrEvent"("externalId");
 
 -- CreateIndex
@@ -290,6 +321,15 @@ ALTER TABLE "PromptTemplate" ADD CONSTRAINT "PromptTemplate_engineerId_fkey" FOR
 
 -- AddForeignKey
 ALTER TABLE "PromptTemplate" ADD CONSTRAINT "PromptTemplate_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "PromptTemplate"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PromptAuditLog" ADD CONSTRAINT "PromptAuditLog_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PromptAuditLog" ADD CONSTRAINT "PromptAuditLog_promptTemplateId_fkey" FOREIGN KEY ("promptTemplateId") REFERENCES "PromptTemplate"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PromptAuditLog" ADD CONSTRAINT "PromptAuditLog_engineerId_fkey" FOREIGN KEY ("engineerId") REFERENCES "Engineer"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "PrEvent" ADD CONSTRAINT "PrEvent_productId_fkey" FOREIGN KEY ("productId") REFERENCES "Product"("id") ON DELETE CASCADE ON UPDATE CASCADE;

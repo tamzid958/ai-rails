@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import { useProduct } from "@/lib/product-context";
 import { api } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
@@ -17,7 +17,10 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Plus, MoreHorizontal, Shield, Trash2 } from "lucide-react";
+import { Avatar } from "@/components/ui/avatar";
+import { Tooltip } from "@/components/ui/tooltip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Plus, MoreHorizontal, Shield, Trash2, Users } from "lucide-react";
 
 const ROLE_VARIANT = { OWNER: "info", LEAD: "success", MEMBER: "default" } as const;
 
@@ -98,7 +101,12 @@ export default function MembersPage() {
             <TableBody>
               {members?.map((m) => (
                 <TableRow key={m.id}>
-                  <TableCell>{m.name}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center gap-2">
+                      <Avatar name={m.name} size="sm" />
+                      <span className="text-text-secondary text-xs">{m.name}</span>
+                    </span>
+                  </TableCell>
                   <TableCell mono>{m.email}</TableCell>
                   <TableCell mono>
                     {m.gitUsername ?? <span className="text-warning text-xs">No git username</span>}
@@ -106,7 +114,13 @@ export default function MembersPage() {
                   <TableCell>
                     <Badge variant={ROLE_VARIANT[m.role]}>{m.role}</Badge>
                   </TableCell>
-                  <TableCell>{format(new Date(m.createdAt), "MMM d, yyyy")}</TableCell>
+                  <TableCell>
+                    <Tooltip content={format(new Date(m.createdAt), "PPpp")} side="left">
+                      <span className="text-xs text-text-muted">
+                        {formatDistanceToNow(new Date(m.createdAt), { addSuffix: true })}
+                      </span>
+                    </Tooltip>
+                  </TableCell>
                   {isOwner && (
                     <TableCell>
                       <DropdownMenu>
@@ -132,7 +146,11 @@ export default function MembersPage() {
                 </TableRow>
               ))}
               {members?.length === 0 && (
-                <TableRow><TableCell className="text-center text-text-tertiary py-8">No members found.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={isOwner ? 6 : 5}>
+                    <EmptyState title="No members" description="Add engineers to this product." icon={<Users size={32} />} compact />
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>

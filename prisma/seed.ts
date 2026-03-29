@@ -1,8 +1,10 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { createHmac, randomBytes } from "node:crypto";
 
-const adapter = new PrismaPg(process.env["DATABASE_URL"]!);
+const databaseUrl = process.env["DATABASE_URL"];
+if (!databaseUrl) throw new Error("DATABASE_URL env var is required");
+const adapter = new PrismaPg(databaseUrl);
 const prisma = new PrismaClient({ adapter });
 
 const API_KEY_PREFIX = "ar_k1_";
@@ -21,7 +23,7 @@ function makeApiKey(): { raw: string; hashed: string } {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function pick<T>(arr: readonly T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]!;
+  return arr[Math.floor(Math.random() * arr.length)] as T;
 }
 
 function randInt(min: number, max: number): number {
@@ -300,6 +302,7 @@ async function main() {
   // ── Wipe all existing data (order matters for FK constraints) ──────────────
 
   console.log("Clearing existing data...");
+  await prisma.promptAuditLog.deleteMany();
   await prisma.aiActivity.deleteMany();
   await prisma.syncEvent.deleteMany();
   await prisma.recommendation.deleteMany();
@@ -356,7 +359,7 @@ async function main() {
 
   console.log("Creating memberships...");
   for (let i = 0; i < engineers.length; i++) {
-    const eng = engineers[i]!;
+    const eng = engineers[i] as (typeof engineers)[number];
     const role =
       eng.email === "tamjidahmed958@gmail.com"
         ? "OWNER"
@@ -443,7 +446,7 @@ async function main() {
     const overrideCount = randInt(3, Math.min(6, uniqueTaskBases.length));
     const shuffled = [...uniqueTaskBases].sort(() => Math.random() - 0.5);
     for (let i = 0; i < overrideCount; i++) {
-      const base = shuffled[i]!;
+      const base = shuffled[i] as (typeof shuffled)[number];
       await prisma.promptTemplate.create({
         data: {
           productId: product.id,
@@ -470,7 +473,7 @@ async function main() {
   // ── 7. PR Events (~750) ────────────────────────────────────────────────────
 
   console.log("Creating PR events...");
-  const prData: any[] = [];
+  const prData: Prisma.PrEventCreateManyInput[] = [];
   let prCounter = 0;
 
   for (const eng of engineers) {
@@ -546,7 +549,7 @@ async function main() {
   for (const eng of engineers) {
     const actCount = randInt(250, 350);
     const engPrIds = prByEngineer.get(eng.id) ?? [];
-    const actData: any[] = [];
+    const actData: Prisma.AiActivityCreateManyInput[] = [];
 
     for (let i = 0; i < actCount; i++) {
       const method = pick(CAPTURE_METHODS);
@@ -622,7 +625,7 @@ async function main() {
   // ── 9. Recommendations (~200) ──────────────────────────────────────────────
 
   console.log("Creating recommendations...");
-  const recData: any[] = [];
+  const recData: Prisma.RecommendationCreateManyInput[] = [];
 
   for (let i = 0; i < 200; i++) {
     const tmpl = pick(REC_TEMPLATES);
@@ -668,7 +671,7 @@ async function main() {
   // ── 10. Sync Events (~525) ─────────────────────────────────────────────────
 
   console.log("Creating sync events...");
-  const syncData: any[] = [];
+  const syncData: Prisma.SyncEventCreateManyInput[] = [];
 
   for (const eng of engineers) {
     const syncCount = randInt(25, 45);
@@ -693,6 +696,78 @@ async function main() {
   await prisma.syncEvent.createMany({ data: syncData });
   console.log(`  ✓ ${syncData.length} sync events`);
 
+  // ── 11. Prompt Audit Logs (~400) ──────────────────────────────────────────
+
+  console.log("Creating prompt audit logs...");
+
+  // Fetch all prompt templates to reference in audit logs
+  const allPromptTemplates = await prisma.promptTemplate.findMany({
+    where: { productId: product.id },
+    select: { id: true, taskType: true, name: true, content: true, isBase: true, engineerId: true, version: true },
+  });
+
+  const AUDIT_CONTENT_SAMPLES = [
+    "Review this code for security vulnerabilities, injection risks, and auth bypass. Flag any hardcoded secrets.",
+    "Generate integration tests that cover API endpoints end-to-end with realistic fixtures and edge cases.",
+    "Refactor to extract business logic into a service layer with dependency injection points.",
+    "Analyze this bug, identify root cause, suggest fix, and recommend regression tests.",
+    "Generate OpenAPI-compatible documentation with request/response schemas and examples.",
+    "Write an ADR for this change including context, decision, consequences, and alternatives.",
+    "Generate focused unit tests for pure business logic. Mock external dependencies.",
+    "Review for performance issues: N+1 queries, missing indexes, unnecessary allocations.",
+    "Break this feature into implementation steps. Identify affected files and testing strategy.",
+    "Explain this code to a new team member covering control flow and key design decisions.",
+    "Custom prompt optimized for team conventions. Focus on domain-specific patterns.",
+    "Refactor to improve type safety. Replace any types, add discriminated unions.",
+  ];
+
+  const auditData: Prisma.PromptAuditLogCreateManyInput[] = [];
+
+  for (const tmpl of allPromptTemplates) {
+    // Each template gets 2-6 audit entries representing its change history
+    const entryCount = randInt(2, 6);
+
+    for (let v = 1; v <= entryCount; v++) {
+      const eng = tmpl.engineerId
+        ? engineers.find((e) => e.id === tmpl.engineerId) ?? pick(engineers)
+        : pick(engineers);
+
+      let action: string;
+      if (v === 1) {
+        action = tmpl.isBase ? "CREATE_BASE" : "CREATE_OVERRIDE";
+      } else if (v === entryCount && Math.random() < 0.1) {
+        action = "PROMOTE";
+      } else {
+        action = "UPDATE";
+      }
+
+      const contentBefore = v > 1 ? pick(AUDIT_CONTENT_SAMPLES) : null;
+      const contentAfter = pick(AUDIT_CONTENT_SAMPLES);
+
+      const daysAgo = Math.max(0, 90 - v * randInt(5, 20));
+
+      auditData.push({
+        productId: product.id,
+        promptTemplateId: tmpl.id,
+        engineerId: eng.id,
+        action,
+        version: v,
+        contentBefore,
+        contentAfter,
+        metadata:
+          action === "PROMOTE"
+            ? { promotedFrom: eng.name, reason: "Higher acceptance rate" }
+            : action === "UPDATE"
+              ? { changeReason: pick(["Performance improvement", "Style update", "Bug fix", "Team feedback", "A/B test result"]) }
+              : undefined,
+        createdAt: daysAgoDate(daysAgo),
+      });
+    }
+  }
+
+  await prisma.promptAuditLog.createMany({ data: auditData });
+  console.log(`  ✓ ${auditData.length} prompt audit logs`);
+
   // ── Summary ────────────────────────────────────────────────────────────────
 
   const counts = await Promise.all([
@@ -702,6 +777,7 @@ async function main() {
     prisma.apiKey.count(),
     prisma.repo.count(),
     prisma.promptTemplate.count(),
+    prisma.promptAuditLog.count(),
     prisma.prEvent.count(),
     prisma.aiActivity.count(),
     prisma.recommendation.count(),
@@ -710,18 +786,19 @@ async function main() {
 
   const total = counts.reduce((a, b) => a + b, 0);
   console.log(`\n══════════════════════════════════════`);
-  console.log(`  Engineers:        ${counts[0]}`);
-  console.log(`  Products:         ${counts[1]}`);
-  console.log(`  Memberships:      ${counts[2]}`);
-  console.log(`  API Keys:         ${counts[3]}`);
-  console.log(`  Repos:            ${counts[4]}`);
-  console.log(`  Prompt Templates: ${counts[5]}`);
-  console.log(`  PR Events:        ${counts[6]}`);
-  console.log(`  AI Activities:    ${counts[7]}`);
-  console.log(`  Recommendations:  ${counts[8]}`);
-  console.log(`  Sync Events:      ${counts[9]}`);
+  console.log(`  Engineers:          ${counts[0]}`);
+  console.log(`  Products:           ${counts[1]}`);
+  console.log(`  Memberships:        ${counts[2]}`);
+  console.log(`  API Keys:           ${counts[3]}`);
+  console.log(`  Repos:              ${counts[4]}`);
+  console.log(`  Prompt Templates:   ${counts[5]}`);
+  console.log(`  Prompt Audit Logs:  ${counts[6]}`);
+  console.log(`  PR Events:          ${counts[7]}`);
+  console.log(`  AI Activities:      ${counts[8]}`);
+  console.log(`  Recommendations:    ${counts[9]}`);
+  console.log(`  Sync Events:        ${counts[10]}`);
   console.log(`  ────────────────────────────────────`);
-  console.log(`  TOTAL RECORDS:    ${total}`);
+  console.log(`  TOTAL RECORDS:      ${total}`);
   console.log(`══════════════════════════════════════\n`);
   console.log("Seed complete.");
 }

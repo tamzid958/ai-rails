@@ -1,19 +1,29 @@
 "use client";
 
 type SwissTooltipPayloadEntry = { name?: string; value?: number; color?: string };
-type SwissTooltipProps = { active?: boolean; payload?: SwissTooltipPayloadEntry[]; label?: string; formatter?: (value: number, name: string) => string };
+type SwissTooltipProps = { active?: boolean; payload?: SwissTooltipPayloadEntry[]; label?: string; formatter?: (value: number, name: string) => string; labelFormatter?: (label: string) => string };
 
-export function SwissTooltip({ active, payload, label, formatter }: SwissTooltipProps) {
+export function SwissTooltip({ active, payload, label, formatter, labelFormatter }: SwissTooltipProps) {
   if (!active || !payload?.length) return null;
 
+  const displayLabel = labelFormatter && label ? labelFormatter(label) : label;
+
   return (
-    <div style={{ background: "var(--color-surface-overlay)", border: "1px solid var(--color-border-muted)", borderRadius: 8, padding: "8px 12px" }}>
-      <p style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 4 }}>{label}</p>
+    <div className="rounded-lg border border-border-muted bg-surface-overlay px-3 py-2 shadow-md">
+      {displayLabel && (
+        <p className="text-[11px] text-text-muted mb-1">{displayLabel}</p>
+      )}
       {payload.map((entry) => (
-        <p key={entry.name} style={{ fontSize: 13, color: "var(--color-text-primary)" }} className="tabular-nums">
-          <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", marginRight: 6, verticalAlign: "middle", backgroundColor: entry.color }} />
-          {formatter ? formatter(entry.value ?? 0, entry.name ?? "") : `${entry.name}: ${entry.value}`}
-        </p>
+        <div key={entry.name} className="flex items-center gap-1.5 tabular-nums text-[13px] text-text-primary">
+          <span
+            className="inline-block w-2 h-2 rounded-full shrink-0"
+            style={{ backgroundColor: entry.color }}
+          />
+          <span className="text-text-muted">{entry.name}:</span>
+          <span className="font-medium">
+            {formatter ? formatter(entry.value ?? 0, entry.name ?? "") : (entry.value ?? 0).toLocaleString()}
+          </span>
+        </div>
       ))}
     </div>
   );

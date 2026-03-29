@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { useProduct } from "@/lib/product-context";
 import { api } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
@@ -11,7 +11,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartCard } from "@/components/ui/chart-card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Copy, Check, Eye, EyeOff } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Copy, Check, Eye, EyeOff, Webhook } from "lucide-react";
 
 const WEBHOOK_VARIANT = {
   CONNECTED: "success",
@@ -89,7 +91,7 @@ export default function WebhooksPage() {
                   <Button size="sm" variant="ghost" onClick={() => setShowSecret(!showSecret)}>
                     {showSecret ? <EyeOff size={12} strokeWidth={1.5} /> : <Eye size={12} strokeWidth={1.5} />}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => copyText("secret", data.webhookSecret!)}>
+                  <Button size="sm" variant="ghost" onClick={() => data.webhookSecret && copyText("secret", data.webhookSecret)}>
                     {copiedField === "secret" ? <Check size={12} strokeWidth={1.5} /> : <Copy size={12} strokeWidth={1.5} />}
                   </Button>
                 </div>
@@ -118,12 +120,22 @@ export default function WebhooksPage() {
                       <Badge variant={WEBHOOK_VARIANT[repo.webhookStatus]}>{repo.webhookStatus}</Badge>
                     </TableCell>
                     <TableCell>
-                      {repo.lastEventAt ? formatDistanceToNow(new Date(repo.lastEventAt), { addSuffix: true }) : "No events yet"}
+                      {repo.lastEventAt ? (
+                      <Tooltip content={format(new Date(repo.lastEventAt), "PPpp")} side="left">
+                        <span className="text-xs text-text-muted">{formatDistanceToNow(new Date(repo.lastEventAt), { addSuffix: true })}</span>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-xs text-text-muted">No events yet</span>
+                    )}
                     </TableCell>
                   </TableRow>
                 ))}
                 {data?.repos.length === 0 && (
-                  <TableRow><TableCell className="text-center text-text-tertiary py-8">No repositories linked. Add repos in Settings → Repositories.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell colSpan={4}>
+                      <EmptyState title="No repositories" description="Add repos in Settings → Repositories first." icon={<Webhook size={32} />} compact />
+                    </TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>

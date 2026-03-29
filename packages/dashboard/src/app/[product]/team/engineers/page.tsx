@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useProduct } from "@/lib/product-context";
-import { api, type Period, type TeamEngineerRow } from "@/lib/api-client";
+import { api, type Period, type TeamEngineersResponse } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RichnessBadge } from "@/components/data-richness/richness-badge";
 import { PeriodSelector } from "@/components/engineer/period-selector";
 import { ChartCard } from "@/components/ui/chart-card";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -19,7 +21,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 
-type SortKey = keyof Pick<TeamEngineerRow, "name" | "activities" | "acceptanceRate" | "cost">;
+type SortKey = "name" | "activities" | "acceptanceRate" | "cost";
 
 const ROLE_VARIANT = {
   OWNER: "info",
@@ -30,27 +32,27 @@ const ROLE_VARIANT = {
 export default function TeamEngineersPage() {
   const { product } = useProduct();
   const [period, setPeriod] = useState<Period>("30d");
+  const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<SortKey>("activities");
   const [sortAsc, setSortAsc] = useState(false);
 
-  const { data: engineers, isLoading } = useQuery({
-    queryKey: ["team-engineers", product.id, period],
-    queryFn: () => api.getTeamEngineers(product.id, period),
+  const pageSize = 20;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["team-engineers", product.id, period, page, pageSize, sortKey, sortAsc],
+    queryFn: () =>
+      api.getTeamEngineers(product.id, period, {
+        page,
+        pageSize,
+        sortBy: sortKey,
+        sortOrder: sortAsc ? "asc" : "desc",
+      }),
+    placeholderData: (prev) => prev,
   });
 
-  const sorted = useMemo(() => {
-    if (!engineers) return [];
-    return [...engineers].sort((a, b) => {
-      const aVal = a[sortKey] ?? -1;
-      const bVal = b[sortKey] ?? -1;
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-      }
-      return sortAsc
-        ? (aVal as number) - (bVal as number)
-        : (bVal as number) - (aVal as number);
-    });
-  }, [engineers, sortKey, sortAsc]);
+  const engineers = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / pageSize);
 
   function handleSort(key: SortKey) {
     if (sortKey === key) {
@@ -59,6 +61,7 @@ export default function TeamEngineersPage() {
       setSortKey(key);
       setSortAsc(false);
     }
+    setPage(0);
   }
 
   function sortIndicator(key: SortKey) {
@@ -70,13 +73,13 @@ export default function TeamEngineersPage() {
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <PageHeader title="Engineer Comparison" />
-        <PeriodSelector value={period} onChange={setPeriod} />
+        <PeriodSelector value={period} onChange={(v) => { setPeriod(v); setPage(0); }} />
       </div>
 
-      {isLoading ? (
+      {isLoading && !data ? (
         <Skeleton className="h-48" />
       ) : (
-        <ChartCard title="Team Members">
+        <ChartCard title={`Team Members (${total})`}>
           <Table>
             <TableHeader>
               <TableRow>
@@ -106,7 +109,7 @@ export default function TeamEngineersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map((eng) => (
+              {engineers.map((eng) => (
                 <TableRow key={eng.id}>
                   <TableCell>
                     <a
@@ -136,7 +139,7 @@ export default function TeamEngineersPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {sorted.length === 0 && (
+              {engineers.length === 0 && (
                 <TableRow>
                   <TableCell className="text-center text-text-tertiary py-8" mono={false}>
                     No team members found.
@@ -145,6 +148,30 @@ export default function TeamEngineersPage() {
               )}
             </TableBody>
           </Table>
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                <ChevronLeft size={14} /> Previous
+              </Button>
+              <span className="text-xs text-text-muted">
+                Page {page + 1} of {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next <ChevronRight size={14} />
+              </Button>
+            </div>
+          )}
         </ChartCard>
       )}
     </div>

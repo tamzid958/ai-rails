@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getEngineerOrNull } from "@/lib/auth";
 import { prisma } from "@airails/shared";
 
-const DEFAULT_LIMIT = 50;
+const PAGE_SIZE = 20;
 
 export async function GET(request: NextRequest) {
   const engineer = await getEngineerOrNull();
@@ -36,25 +36,33 @@ export async function GET(request: NextRequest) {
   const action = searchParams.get("action");
   if (action) where.action = action;
 
-  const limit = Math.min(Number(searchParams.get("limit")) || DEFAULT_LIMIT, 100);
-  const cursor = searchParams.get("cursor");
+  const page = parseInt(searchParams.get("page") ?? "0", 10);
+  const pageSize = Math.min(
+    parseInt(searchParams.get("pageSize") ?? String(PAGE_SIZE), 10),
+    100,
+  );
 
-  const logs = await prisma.promptAuditLog.findMany({
-    where,
-    include: {
-      engineer: { select: { id: true, name: true } },
-      promptTemplate: { select: { id: true, name: true, taskType: true, acceptanceRate: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: limit + 1,
-    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-  });
+  // Paginated query + total count + action breakdown in parallel
+  const [logs, total, actionCounts] = await Promise.all([
+    prisma.promptAuditLog.findMany({
+      where,
+      include: {
+        engineer: { select: { id: true, name: true } },
+        promptTemplate: { select: { id: true, name: true, taskType: true, acceptanceRate: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: page * pageSize,
+      take: pageSize,
+    }),
+    prisma.promptAuditLog.count({ where }),
+    prisma.promptAuditLog.groupBy({
+      by: ["action"],
+      where: { productId },
+      _count: true,
+    }),
+  ]);
 
-  const hasMore = logs.length > limit;
-  const items = hasMore ? logs.slice(0, limit) : logs;
-  const nextCursor = hasMore ? items[items.length - 1]?.id ?? null : null;
-
-  const data = items.map((log) => ({
+  const items = logs.map((log) => ({
     id: log.id,
     action: log.action,
     version: log.version,
@@ -70,5 +78,14 @@ export async function GET(request: NextRequest) {
     acceptanceRate: log.promptTemplate.acceptanceRate ? Number(log.promptTemplate.acceptanceRate) : null,
   }));
 
-  return NextResponse.json({ items: data, cursor: nextCursor });
+  // Build action stats
+  const stats: Record<string, number> = {};
+  let totalAll = 0;
+  for (const row of actionCounts) {
+    stats[row.action] = row._count;
+    totalAll += row._count;
+  }
+  stats["ALL"] = totalAll;
+
+  return NextResponse.json({ items, total, page, pageSize, stats });
 }

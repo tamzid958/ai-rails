@@ -13,7 +13,7 @@ describe("Sidebar", () => {
     );
 
     expect(screen.queryByText("Team")).not.toBeInTheDocument();
-    expect(screen.getByText("Engineer")).toBeInTheDocument();
+    expect(screen.getByText("My Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
   });
 
@@ -23,7 +23,7 @@ describe("Sidebar", () => {
     );
 
     expect(screen.getByText("Team")).toBeInTheDocument();
-    expect(screen.getByText("Engineer")).toBeInTheDocument();
+    expect(screen.getByText("My Dashboard")).toBeInTheDocument();
   });
 
   it("should_highlight_active_nav_item", () => {

@@ -1,23 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useProduct } from "@/lib/product-context";
 import { api, type Period } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ChartCard } from "@/components/ui/chart-card";
+import { InsightBlock, InsightCallout } from "@/components/ui/insight-block";
 import { PeriodSelector } from "@/components/engineer/period-selector";
 import { SwissAreaChart } from "@/components/charts/swiss-line-chart";
-import { SwissDonutChart } from "@/components/charts/swiss-donut-chart";
-import { useChartColors } from "@/components/charts/use-chart-colors";
-import { AlertTriangle } from "lucide-react";
+import { SwissHorizontalBar } from "@/components/charts/swiss-bar-chart";
+import { AlertTriangle, TrendingUp } from "lucide-react";
 
 export default function TeamCostsPage() {
   const { product } = useProduct();
   const [period, setPeriod] = useState<Period>("30d");
-  const chartColors = useChartColors();
 
   const { data: costStats, isLoading: statsLoading } = useQuery({
     queryKey: ["team-cost-stats", product.id, period],
@@ -34,15 +34,43 @@ export default function TeamCostsPage() {
     queryFn: () => api.getTeamCostByEngineer(product.id, period),
   });
 
-  const { data: byModel, isLoading: modelLoading } = useQuery({
+  const { data: byModel } = useQuery({
     queryKey: ["team-cost-model", product.id, period],
     queryFn: () => api.getTeamCostByModel(product.id, period),
   });
 
-  const { data: byTaskType, isLoading: taskTypeLoading } = useQuery({
+  const { data: byTaskType } = useQuery({
     queryKey: ["team-cost-task-type", product.id, period],
     queryFn: () => api.getTeamCostByTaskType(product.id, period),
   });
+
+  // Compute budget and efficiency insights — replaces filler donuts
+  const budgetInsights = useMemo(() => {
+    if (!costStats) return null;
+
+    // Projected monthly cost from current daily average
+    const projectedMonthly = costStats.avgPerDay * 30;
+
+    // Budget utilization
+    const budgetUsed = costStats.costAlertDaily
+      ? Math.round((costStats.avgPerDay / costStats.costAlertDaily) * 100)
+      : null;
+
+    // Top model by volume (proxy for cost driver)
+    const topModel = byModel?.length
+      ? [...byModel].sort((a, b) => b.count - a.count)[0]
+      : null;
+
+    // Top task type
+    const topTaskType = byTaskType?.length
+      ? [...byTaskType].sort((a, b) => b.count - a.count)[0]
+      : null;
+
+    // Engineers exceeding threshold
+    const exceededCount = byEngineer?.filter((e) => e.exceeded).length ?? 0;
+
+    return { projectedMonthly, budgetUsed, topModel, topTaskType, exceededCount };
+  }, [costStats, byModel, byTaskType, byEngineer]);
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -56,13 +84,21 @@ export default function TeamCostsPage() {
         </div>
       </div>
 
+      {/* Alert callouts */}
       {costStats?.dailyExceeded && (
-        <div className="flex items-start gap-3 bg-warning/10 border border-warning/20 rounded-lg p-4">
-          <AlertTriangle size={16} strokeWidth={1.5} className="text-warning mt-0.5 shrink-0" />
-          <p className="text-sm text-warning">
-            Daily cost threshold exceeded — avg ${costStats.avgPerDay.toFixed(2)}/day exceeds ${costStats.costAlertDaily?.toFixed(2)}/day limit
-          </p>
-        </div>
+        <InsightCallout icon={<AlertTriangle size={14} />} variant="warning">
+          Daily cost threshold exceeded — avg ${costStats.avgPerDay.toFixed(2)}/day exceeds ${costStats.costAlertDaily?.toFixed(2)}/day limit
+        </InsightCallout>
+      )}
+      {budgetInsights && budgetInsights.exceededCount > 0 && !costStats?.dailyExceeded && (
+        <InsightCallout icon={<AlertTriangle size={14} />} variant="warning">
+          {budgetInsights.exceededCount} engineer{budgetInsights.exceededCount > 1 ? "s" : ""} exceeded their individual cost threshold
+        </InsightCallout>
+      )}
+      {budgetInsights && budgetInsights.budgetUsed !== null && budgetInsights.budgetUsed !== undefined && budgetInsights.budgetUsed < 50 && (
+        <InsightCallout icon={<TrendingUp size={14} />} variant="success">
+          Budget is healthy — using {budgetInsights.budgetUsed}% of daily limit with room to scale
+        </InsightCallout>
       )}
 
       {statsLoading ? (
@@ -77,53 +113,75 @@ export default function TeamCostsPage() {
         </div>
       ) : null}
 
-      <ChartCard title="Cost Trend">
+      {/* Budget & efficiency insights — replaces model/task-type donuts */}
+      {budgetInsights && (
+        <InsightBlock
+          items={[
+            {
+              label: "Projected monthly cost",
+              value: `$${budgetInsights.projectedMonthly.toFixed(2)}`,
+              detail: "at current daily rate",
+              sentiment: budgetInsights.budgetUsed !== null && budgetInsights.budgetUsed > 90 ? "negative" : "neutral",
+            },
+            ...(budgetInsights.budgetUsed !== null ? [{
+              label: "Daily budget utilization",
+              value: `${budgetInsights.budgetUsed}%`,
+              detail: `$${costStats?.avgPerDay.toFixed(2)} of $${costStats?.costAlertDaily?.toFixed(2)} limit`,
+              sentiment: (budgetInsights.budgetUsed <= 70 ? "positive" : budgetInsights.budgetUsed > 100 ? "negative" : "neutral") as "positive" | "negative" | "neutral",
+            }] : []),
+            ...(budgetInsights.topModel ? [{
+              label: "Highest-volume model",
+              value: budgetInsights.topModel.model,
+              detail: `${budgetInsights.topModel.count} requests — primary cost driver`,
+            }] : []),
+            ...(budgetInsights.topTaskType ? [{
+              label: "Most expensive task type",
+              value: budgetInsights.topTaskType.taskType,
+              detail: `${budgetInsights.topTaskType.count} sessions`,
+            }] : []),
+          ]}
+        />
+      )}
+
+      {/* Cost Trend — answers: "Is our spend under control?" */}
+      <ChartCard
+        title="Cost Trend"
+        description="Daily team spend — dashed line shows budget threshold, spikes warrant investigation"
+      >
         {trendLoading ? <Skeleton className="h-75" /> : costTrend?.length ? (
-          <SwissAreaChart data={costTrend} xKey="date" dataKey="cost" label="Cost (USD)" thresholdValue={costStats?.costAlertDaily ?? undefined} tooltipFormatter={(value) => `$${value.toFixed(2)}`} />
+          <SwissAreaChart
+            data={costTrend}
+            xKey="date"
+            dataKey="cost"
+            label="Cost (USD)"
+            thresholdValue={costStats?.costAlertDaily ?? undefined}
+            thresholdLabel={costStats?.costAlertDaily ? `Budget $${costStats.costAlertDaily}/day` : undefined}
+            tooltipFormatter={(v) => `$${v.toFixed(2)}`}
+            yAxisFormatter={(v) => `$${v}`}
+          />
         ) : (
-          <p className="text-sm text-text-tertiary py-12 text-center">No cost data for this period.</p>
+          <EmptyState title="No cost data" description="No gateway-captured costs for this period." compact />
         )}
       </ChartCard>
 
-      <ChartCard title="By Engineer">
+      {/* Cost by Engineer — answers: "Who's driving spend?" */}
+      <ChartCard
+        title="Spend by Engineer"
+        description="Ranked by total cost — red bars indicate engineers exceeding their individual threshold"
+      >
         {engineerLoading ? <Skeleton className="h-48" /> : byEngineer?.length ? (
-          <div className="flex flex-col gap-3">
-            {byEngineer.map((e, i) => {
-              const max = Math.max(...byEngineer.map((x) => x.cost), 1);
-              return (
-                <div key={e.name} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ width: 96, textAlign: "right", fontSize: 13, color: "var(--color-text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.name}</span>
-                  <div style={{ flex: 1, height: 20, background: "var(--color-surface)", borderRadius: 2, overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${(e.cost / max) * 100}%`, backgroundColor: e.exceeded ? "var(--color-danger)" : chartColors[i % chartColors.length], borderRadius: 2 }} />
-                  </div>
-                  <span style={{ width: 64, textAlign: "right", fontSize: 13, color: "var(--color-text-secondary)" }} className="tabular-nums">${e.cost.toFixed(2)}</span>
-                  {e.exceeded && <span className="text-danger text-xs font-medium">!</span>}
-                </div>
-              );
-            })}
-          </div>
+          <SwissHorizontalBar
+            items={byEngineer.map((e) => ({
+              label: e.name,
+              value: e.cost,
+              color: e.exceeded ? "var(--color-danger)" : undefined,
+            }))}
+            valueFormatter={(v) => `$${v.toFixed(2)}`}
+          />
         ) : (
-          <p className="text-sm text-text-tertiary py-8 text-center">No engineer cost data.</p>
+          <EmptyState title="No engineer cost data" compact />
         )}
       </ChartCard>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="By Model" className="h-full">
-          {modelLoading ? <Skeleton className="h-48" /> : byModel?.length ? (
-            <SwissDonutChart items={byModel.map((m) => ({ label: m.model, value: m.count }))} maxItems={5} />
-          ) : (
-            <p className="text-sm text-text-tertiary py-8 text-center">No model data.</p>
-          )}
-        </ChartCard>
-
-        <ChartCard title="By Task Type" className="h-full">
-          {taskTypeLoading ? <Skeleton className="h-48" /> : byTaskType?.length ? (
-            <SwissDonutChart items={byTaskType.map((t) => ({ label: t.taskType, value: t.count }))} maxItems={6} />
-          ) : (
-            <p className="text-sm text-text-tertiary py-8 text-center">No task type data.</p>
-          )}
-        </ChartCard>
-      </div>
     </div>
   );
 }

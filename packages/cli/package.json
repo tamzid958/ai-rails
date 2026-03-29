@@ -1,11 +1,25 @@
 {
   "name": "@airails/cli",
   "version": "0.1.0",
-  "private": true,
   "license": "BUSL-1.1",
+  "description": "AI governance CLI for engineering teams",
   "type": "module",
   "bin": {
     "airails": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamzid958/ai-rails.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
     "build": "tsc",

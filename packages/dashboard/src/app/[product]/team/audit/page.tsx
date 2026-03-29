@@ -1,40 +1,112 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { useProduct } from "@/lib/product-context";
 import { api, type AuditAction, type AuditLogRow } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Avatar } from "@/components/ui/avatar";
+import { Tooltip } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+} from "@/components/ui/dialog";
 import { ChartCard } from "@/components/ui/chart-card";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FilePlus,
+  FileEdit,
+  ArrowUpCircle,
+  Trash2,
+  FileCog,
+  FileText,
+  Clock,
+  User,
+} from "lucide-react";
 
-const ACTION_BADGE: Record<AuditAction, { label: string; variant: "success" | "info" | "warning" | "purple" | "error" }> = {
-  CREATE_BASE: { label: "Created Base", variant: "success" },
-  CREATE_OVERRIDE: { label: "Created Override", variant: "info" },
-  UPDATE: { label: "Updated", variant: "warning" },
-  PROMOTE: { label: "Promoted", variant: "purple" },
-  DELETE: { label: "Deleted", variant: "error" },
+// ── Constants ───────────────────────────────────────────────────────────────
+
+const ACTION_CONFIG: Record<
+  AuditAction,
+  {
+    label: string;
+    variant: "success" | "info" | "warning" | "purple" | "error";
+    icon: typeof FilePlus;
+    description: string;
+  }
+> = {
+  CREATE_BASE: {
+    label: "Created Base",
+    variant: "success",
+    icon: FilePlus,
+    description: "New base template created",
+  },
+  CREATE_OVERRIDE: {
+    label: "Override",
+    variant: "info",
+    icon: FileCog,
+    description: "Engineer override created",
+  },
+  UPDATE: {
+    label: "Updated",
+    variant: "warning",
+    icon: FileEdit,
+    description: "Template content modified",
+  },
+  PROMOTE: {
+    label: "Promoted",
+    variant: "purple",
+    icon: ArrowUpCircle,
+    description: "Override promoted to base",
+  },
+  DELETE: {
+    label: "Deleted",
+    variant: "error",
+    icon: Trash2,
+    description: "Template removed",
+  },
 };
 
-const ACTION_OPTIONS: { value: string; label: string }[] = [
-  { value: "", label: "All Actions" },
+const ACTION_FILTER_OPTIONS = [
+  { value: "ALL", label: "All Actions" },
   { value: "CREATE_BASE", label: "Created Base" },
-  { value: "CREATE_OVERRIDE", label: "Created Override" },
+  { value: "CREATE_OVERRIDE", label: "Override" },
   { value: "UPDATE", label: "Updated" },
   { value: "PROMOTE", label: "Promoted" },
   { value: "DELETE", label: "Deleted" },
 ];
 
-function DiffView({ before, after }: { before: string | null; after: string }) {
+// ── Diff Viewer ─────────────────────────────────────────────────────────────
+
+function DiffViewer({ before, after, version }: { before: string | null; after: string; version: number }) {
   if (!before) {
     return (
-      <div style={{ padding: "12px 16px", background: "var(--color-surface)", border: "1px solid var(--color-border-subtle)", borderRadius: 6 }}>
-        <p style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 6 }}>Initial content</p>
-        <pre style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--color-text-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.6, margin: 0 }}>{after}</pre>
+      <div className="rounded-lg border border-border-subtle bg-surface p-4">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-xs font-medium text-emerald-400">+ Initial content</span>
+          <Badge variant="outline">v{version}</Badge>
+        </div>
+        <pre className="text-xs leading-relaxed text-text-secondary font-mono whitespace-pre-wrap m-0">
+          {after}
+        </pre>
       </div>
     );
   }
@@ -43,28 +115,40 @@ function DiffView({ before, after }: { before: string | null; after: string }) {
   const afterLines = after.split("\n");
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-      <div style={{ padding: "12px 16px", background: "var(--color-surface)", border: "1px solid var(--color-border-subtle)", borderRadius: 6 }}>
-        <p style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 6 }}>Before (v{"{prev}"})</p>
-        <pre style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--color-text-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.6, margin: 0 }}>
+    <div className="grid grid-cols-2 gap-3">
+      <div className="rounded-lg border border-border-subtle bg-surface p-4 overflow-hidden">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-xs font-medium text-red-400">− Before</span>
+          <Badge variant="outline">v{version - 1}</Badge>
+        </div>
+        <pre className="text-xs leading-relaxed font-mono whitespace-pre-wrap m-0">
           {beforeLines.map((line, i) => {
             const changed = afterLines[i] !== line;
             return (
-              <span key={i} style={changed ? { background: "rgba(239,68,68,0.12)", display: "block" } : { display: "block" }}>
-                {line}
+              <span
+                key={i}
+                className={`block ${changed ? "bg-red-500/10 text-red-300" : "text-text-secondary"}`}
+              >
+                {line || "\u00A0"}
               </span>
             );
           })}
         </pre>
       </div>
-      <div style={{ padding: "12px 16px", background: "var(--color-surface)", border: "1px solid var(--color-border-subtle)", borderRadius: 6 }}>
-        <p style={{ fontSize: 11, color: "var(--color-text-muted)", marginBottom: 6 }}>After</p>
-        <pre style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--color-text-secondary)", whiteSpace: "pre-wrap", lineHeight: 1.6, margin: 0 }}>
+      <div className="rounded-lg border border-border-subtle bg-surface p-4 overflow-hidden">
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-xs font-medium text-emerald-400">+ After</span>
+          <Badge variant="outline">v{version}</Badge>
+        </div>
+        <pre className="text-xs leading-relaxed font-mono whitespace-pre-wrap m-0">
           {afterLines.map((line, i) => {
             const changed = beforeLines[i] !== line;
             return (
-              <span key={i} style={changed ? { background: "rgba(52,211,153,0.12)", display: "block" } : { display: "block" }}>
-                {line}
+              <span
+                key={i}
+                className={`block ${changed ? "bg-emerald-500/10 text-emerald-300" : "text-text-secondary"}`}
+              >
+                {line || "\u00A0"}
               </span>
             );
           })}
@@ -74,155 +158,353 @@ function DiffView({ before, after }: { before: string | null; after: string }) {
   );
 }
 
+// ── Metadata Pills ──────────────────────────────────────────────────────────
+
+function MetadataPills({ metadata }: { metadata: Record<string, unknown> | null }) {
+  if (!metadata || Object.keys(metadata).length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 mt-3">
+      {Object.entries(metadata).map(([key, value]) => (
+        <span
+          key={key}
+          className="inline-flex items-center gap-1.5 rounded-md bg-surface-raised/60 px-2.5 py-1 text-xs"
+        >
+          <span className="text-text-muted">{key}:</span>
+          <code className="font-mono text-text-secondary">{String(value)}</code>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// ── Stat Pill ───────────────────────────────────────────────────────────────
+
+function StatPill({
+  label,
+  count,
+  active,
+  onClick,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`
+        inline-flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium
+        transition-all cursor-pointer border
+        ${
+          active
+            ? "border-accent/30 bg-accent/10 text-accent"
+            : "border-border-subtle bg-surface hover:bg-surface-raised text-text-muted hover:text-text-secondary"
+        }
+      `}
+    >
+      {label}
+      <span
+        className={`
+          rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums
+          ${active ? "bg-accent/20 text-accent" : "bg-surface-raised text-text-muted"}
+        `}
+      >
+        {count}
+      </span>
+    </button>
+  );
+}
+
+// ── Page ────────────────────────────────────────────────────────────────────
+
 export default function PromptAuditPage() {
   const { product } = useProduct();
-  const [actionFilter, setActionFilter] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [actionFilter, setActionFilter] = useState("ALL");
+  const [engineerFilter, setEngineerFilter] = useState("ALL");
+  const [page, setPage] = useState(0);
+  const [detailRow, setDetailRow] = useState<AuditLogRow | null>(null);
+  const pageSize = 20;
 
   const { data, isLoading } = useQuery({
-    queryKey: ["prompt-audit", product.id, actionFilter, cursor],
+    queryKey: ["prompt-audit", product.id, actionFilter, engineerFilter, page, pageSize],
     queryFn: () =>
       api.getPromptAudit(product.id, {
-        ...(actionFilter ? { action: actionFilter } : {}),
-        ...(cursor ? { cursor } : {}),
+        ...(actionFilter !== "ALL" ? { action: actionFilter } : {}),
+        ...(engineerFilter !== "ALL" ? { engineerId: engineerFilter } : {}),
+        page: String(page),
+        pageSize: String(pageSize),
       }),
+    placeholderData: (prev) => prev,
   });
 
   const items = data?.items ?? [];
+  const total = data?.total ?? 0;
+  const stats = data?.stats ?? {};
+  const totalPages = Math.ceil(total / pageSize);
+
+  // Collect unique engineers for the filter dropdown
+  const engineers = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const item of items) {
+      if (!seen.has(item.engineerId)) {
+        seen.set(item.engineerId, item.engineerName);
+      }
+    }
+    return Array.from(seen, ([id, name]) => ({ value: id, label: name }));
+  }, [items]);
+
+  const engineerOptions = [
+    { value: "ALL", label: "All Engineers" },
+    ...engineers,
+  ];
+
+  function resetFilters() {
+    setActionFilter("ALL");
+    setEngineerFilter("ALL");
+    setPage(0);
+  }
+
+  const hasActiveFilters = actionFilter !== "ALL" || engineerFilter !== "ALL";
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Prompt Audit"
-        description="Immutable changelog of all prompt template modifications"
+        title="Prompt Audit Log"
+        description="Immutable changelog of every prompt template modification"
       />
 
+      {/* ── Action stat pills ──────────────────────────────────────────── */}
+      {isLoading && !data ? (
+        <div className="flex gap-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-9 w-28" />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <StatPill
+            label="All"
+            count={stats["ALL"] ?? 0}
+            active={actionFilter === "ALL"}
+            onClick={() => { setActionFilter("ALL"); setPage(0); }}
+          />
+          {ACTION_FILTER_OPTIONS.slice(1).map((opt) => (
+            <StatPill
+              key={opt.value}
+              label={opt.label}
+              count={stats[opt.value] ?? 0}
+              active={actionFilter === opt.value}
+              onClick={() => { setActionFilter(opt.value); setPage(0); }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Main table card ────────────────────────────────────────────── */}
       <ChartCard
-        title="Audit Log"
+        title={`${total} event${total !== 1 ? "s" : ""}`}
         action={
-          <select
-            value={actionFilter}
-            onChange={(e) => { setActionFilter(e.target.value); setCursor(undefined); }}
-            style={{
-              fontSize: 12,
-              padding: "5px 10px",
-              background: "var(--color-surface)",
-              color: "var(--color-text-secondary)",
-              border: "1px solid var(--color-border-subtle)",
-              borderRadius: 6,
-              outline: "none",
-            }}
-          >
-            {ACTION_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+          <div className="flex items-center gap-2">
+            <Select
+              value={engineerFilter}
+              onValueChange={(v) => { setEngineerFilter(v); setPage(0); }}
+              options={engineerOptions}
+            />
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={resetFilters}>
+                Clear
+              </Button>
+            )}
+          </div>
         }
       >
-        {isLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-10" />
-            <Skeleton className="h-10" />
-            <Skeleton className="h-10" />
-            <Skeleton className="h-10" />
+        {isLoading && !data ? (
+          <div className="space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Skeleton key={i} className="h-12" />
+            ))}
           </div>
+        ) : items.length === 0 ? (
+          <EmptyState
+            title="No audit events"
+            description={
+              hasActiveFilters
+                ? "No events match your filters. Try adjusting or clearing them."
+                : "Changes to prompt templates will appear here."
+            }
+            icon={<FileText size={32} />}
+          />
         ) : (
           <>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-8">{""}</TableHead>
-                  <TableHead>When</TableHead>
-                  <TableHead>Engineer</TableHead>
                   <TableHead>Action</TableHead>
+                  <TableHead>Engineer</TableHead>
                   <TableHead>Template</TableHead>
                   <TableHead>Task Type</TableHead>
                   <TableHead className="text-center">Version</TableHead>
                   <TableHead className="text-right">Acceptance</TableHead>
+                  <TableHead className="text-right">When</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((row: AuditLogRow) => {
-                  const badge = ACTION_BADGE[row.action];
-                  const isExpanded = expandedId === row.id;
+                {items.map((row) => {
+                  const config = ACTION_CONFIG[row.action];
+                  const Icon = config.icon;
 
                   return (
-                    <TableRow key={row.id}>
-                      <TableCell colSpan={8} style={{ padding: 0 }}>
-                        <div>
-                          <button
-                            onClick={() => setExpandedId(isExpanded ? null : row.id)}
-                            className="w-full text-left cursor-pointer hover:bg-surface-raised/50 transition-colors"
-                            style={{ display: "grid", gridTemplateColumns: "32px 1fr 1fr 1fr 1fr 1fr 80px 100px", alignItems: "center", padding: "10px 16px", gap: 8 }}
+                    <TableRow key={row.id} className="cursor-pointer">
+                      <TableCell>
+                        <button
+                          onClick={() => setDetailRow(row)}
+                          className="inline-flex items-center gap-2 cursor-pointer bg-transparent border-none p-0"
+                        >
+                          <Tooltip content={config.description}>
+                            <span className="inline-flex items-center gap-2">
+                              <Icon size={13} className="text-text-muted shrink-0" />
+                              <Badge variant={config.variant}>{config.label}</Badge>
+                            </span>
+                          </Tooltip>
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          onClick={() => setDetailRow(row)}
+                          className="inline-flex items-center gap-2 cursor-pointer bg-transparent border-none p-0"
+                        >
+                          <Avatar name={row.engineerName} size="sm" />
+                          <span className="text-text-secondary text-xs">
+                            {row.engineerName}
+                          </span>
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <button
+                          onClick={() => setDetailRow(row)}
+                          className="text-text-primary text-xs font-medium cursor-pointer bg-transparent border-none p-0 text-left"
+                        >
+                          {row.templateName}
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{row.taskType}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center" mono>
+                        v{row.version}
+                      </TableCell>
+                      <TableCell className="text-right" mono>
+                        {row.acceptanceRate !== null ? (
+                          <span
+                            className={
+                              row.acceptanceRate >= 70
+                                ? "text-emerald-400"
+                                : row.acceptanceRate >= 50
+                                  ? "text-amber-400"
+                                  : "text-red-400"
+                            }
                           >
-                            <span className="text-text-muted">
-                              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            </span>
-                            <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>
-                              {formatDistanceToNow(new Date(row.createdAt), { addSuffix: true })}
-                            </span>
-                            <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{row.engineerName}</span>
-                            <span><Badge variant={badge.variant}>{badge.label}</Badge></span>
-                            <span style={{ fontSize: 13, color: "var(--color-text-primary)" }}>{row.templateName}</span>
-                            <span style={{ fontSize: 12, color: "var(--color-text-muted)" }}>{row.taskType}</span>
-                            <span style={{ fontSize: 12, color: "var(--color-text-secondary)", textAlign: "center" }}>v{row.version}</span>
-                            <span style={{ fontSize: 12, textAlign: "right", color: row.acceptanceRate !== null ? "var(--color-text-secondary)" : "var(--color-text-muted)" }}>
-                              {row.acceptanceRate !== null ? `${row.acceptanceRate}%` : "—"}
-                            </span>
-                          </button>
-
-                          {isExpanded && (
-                            <div style={{ padding: "0 16px 16px 48px" }}>
-                              <DiffView before={row.contentBefore} after={row.contentAfter} />
-                              {row.metadata && Object.keys(row.metadata).length > 0 && (
-                                <div style={{ marginTop: 8, fontSize: 11, color: "var(--color-text-muted)" }}>
-                                  {Object.entries(row.metadata).map(([k, v]) => (
-                                    <span key={k} style={{ marginRight: 16 }}>{k}: <code style={{ fontFamily: "var(--font-mono)" }}>{String(v)}</code></span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                            {row.acceptanceRate}%
+                          </span>
+                        ) : (
+                          <span className="text-text-muted">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Tooltip
+                          content={format(new Date(row.createdAt), "PPpp")}
+                          side="left"
+                        >
+                          <span className="text-xs text-text-muted">
+                            {formatDistanceToNow(new Date(row.createdAt), {
+                              addSuffix: true,
+                            })}
+                          </span>
+                        </Tooltip>
                       </TableCell>
                     </TableRow>
                   );
                 })}
-                {items.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-text-tertiary py-12">
-                      No audit events yet. Changes to prompt templates will appear here.
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
 
-            {/* Pagination */}
-            {(data?.cursor || cursor) && (
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: 16, paddingTop: 12, borderTop: "1px solid var(--color-border-subtle)" }}>
-                {cursor && (
-                  <button
-                    onClick={() => setCursor(undefined)}
-                    style={{ fontSize: 12, color: "var(--color-accent)", background: "none", border: "none", cursor: "pointer" }}
-                  >
-                    ← Back to latest
-                  </button>
-                )}
-                {data?.cursor && (
-                  <button
-                    onClick={() => setCursor(data.cursor!)}
-                    style={{ fontSize: 12, color: "var(--color-accent)", background: "none", border: "none", cursor: "pointer", marginLeft: "auto" }}
-                  >
-                    Load older →
-                  </button>
-                )}
+            {/* ── Pagination ────────────────────────────────────────────── */}
+            {totalPages > 1 && (
+              <div className="mt-4 flex items-center justify-between">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft size={14} /> Previous
+                </Button>
+                <span className="text-xs text-text-muted tabular-nums">
+                  Page {page + 1} of {totalPages}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next <ChevronRight size={14} />
+                </Button>
               </div>
             )}
           </>
         )}
       </ChartCard>
+
+      {/* ── Detail Dialog ──────────────────────────────────────────────── */}
+      <Dialog open={detailRow !== null} onOpenChange={(open) => { if (!open) setDetailRow(null); }}>
+        {detailRow && (
+          <DialogContent size="lg">
+            <DialogHeader>
+              <DialogTitle>
+                <span className="inline-flex items-center gap-3">
+                  <Badge variant={ACTION_CONFIG[detailRow.action].variant}>
+                    {ACTION_CONFIG[detailRow.action].label}
+                  </Badge>
+                  <span className="text-text-primary">{detailRow.templateName}</span>
+                </span>
+              </DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              {/* Meta row */}
+              <div className="flex flex-wrap items-center gap-4 mb-4 text-xs text-text-muted">
+                <span className="inline-flex items-center gap-1.5">
+                  <User size={12} />
+                  {detailRow.engineerName}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock size={12} />
+                  {format(new Date(detailRow.createdAt), "PPpp")}
+                </span>
+                <Badge variant="outline">{detailRow.taskType}</Badge>
+                <span className="font-mono">v{detailRow.version}</span>
+                {detailRow.acceptanceRate !== null && (
+                  <span className="font-mono">
+                    Acceptance: {detailRow.acceptanceRate}%
+                  </span>
+                )}
+              </div>
+
+              {/* Diff */}
+              <DiffViewer
+                before={detailRow.contentBefore}
+                after={detailRow.contentAfter}
+                version={detailRow.version}
+              />
+
+              {/* Metadata */}
+              <MetadataPills metadata={detailRow.metadata} />
+            </DialogBody>
+          </DialogContent>
+        )}
+      </Dialog>
     </div>
   );
 }

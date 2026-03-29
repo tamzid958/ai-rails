@@ -10,7 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ChartCard } from "@/components/ui/chart-card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useState } from "react";
+import { Cpu } from "lucide-react";
 
 export default function ProvidersPage() {
   const { product, isOwner, isLead } = useProduct();
@@ -104,7 +106,9 @@ export default function ProvidersPage() {
               ))}
               {providers?.length === 0 && (
                 <TableRow>
-                  <TableCell className="text-center text-text-tertiary py-8">No providers configured.</TableCell>
+                  <TableCell colSpan={canManage ? 4 : 3}>
+                    <EmptyState title="No providers" description="No AI models are configured for this product." icon={<Cpu size={32} />} compact />
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>

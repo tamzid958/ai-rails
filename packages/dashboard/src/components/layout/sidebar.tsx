@@ -31,7 +31,7 @@ function buildSections(productSlug: string, canManageTeam: boolean): NavSection[
   const base = `/${productSlug}`;
   const sections: NavSection[] = [
     {
-      title: "Engineer",
+      title: "My Dashboard",
       icon: BarChart3,
       items: [
         { label: "Overview", href: `${base}/engineer`, icon: BarChart3 },
@@ -130,7 +130,19 @@ function CollapsibleSection({ section, collapsed, open, onToggle }: { section: N
           >
             <div className="ml-4 mt-0.5 border-l border-border-subtle pl-3 flex flex-col gap-px">
               {section.items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                // Check if another sibling item has a more specific match.
+                // This prevents "Overview" (/engineer) from staying active
+                // when visiting /engineer/usage, because /engineer/usage is
+                // a more specific match for the "Usage" sibling.
+                const hasMoreSpecificSibling = section.items.some(
+                  (sibling) =>
+                    sibling.href !== item.href &&
+                    sibling.href.startsWith(item.href + "/") &&
+                    (pathname === sibling.href || pathname.startsWith(sibling.href + "/")),
+                );
+                const isActive = hasMoreSpecificSibling
+                  ? false
+                  : pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
                   <Link
                     key={item.href}

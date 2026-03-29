@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { ChartCard } from "@/components/ui/chart-card";
 import { SwissLineChart } from "@/components/charts/swiss-line-chart";
 import { SwissGroupedBar, SwissComparisonBar } from "@/components/charts/swiss-bar-chart";
@@ -52,7 +53,14 @@ export default function EffectivenessPage() {
   if (!effectivenessLoading && effectiveness && !effectiveness.sufficient) {
     return (
       <div>
-        <PageHeader title="Effectiveness" actions={<Button size="sm" variant="secondary" onClick={() => recalcMutation.mutate()} loading={recalcMutation.isPending}><RefreshCw size={12} strokeWidth={1.5} /> Recalculate</Button>} />
+        <PageHeader
+          title="Effectiveness"
+          actions={
+            <Button size="sm" variant="secondary" onClick={() => recalcMutation.mutate()} loading={recalcMutation.isPending}>
+              <RefreshCw size={12} strokeWidth={1.5} /> Recalculate
+            </Button>
+          }
+        />
         <div className="bg-surface-raised border border-border-subtle rounded-lg p-8 text-center">
           <Target size={28} strokeWidth={1} className="text-text-muted mx-auto mb-4" />
           <h3 className="text-base font-medium text-text-primary">Not enough data yet</h3>
@@ -70,7 +78,14 @@ export default function EffectivenessPage() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <PageHeader title="Effectiveness" actions={<Button size="sm" variant="secondary" onClick={() => recalcMutation.mutate()} loading={recalcMutation.isPending}><RefreshCw size={12} strokeWidth={1.5} /> Recalculate</Button>} />
+      <PageHeader
+        title="Effectiveness"
+        actions={
+          <Button size="sm" variant="secondary" onClick={() => recalcMutation.mutate()} loading={recalcMutation.isPending}>
+            <RefreshCw size={12} strokeWidth={1.5} /> Recalculate
+          </Button>
+        }
+      />
 
       {effectivenessLoading ? (
         <div className="grid grid-cols-3 gap-4">
@@ -84,16 +99,29 @@ export default function EffectivenessPage() {
         </div>
       ) : null}
 
-      <ChartCard title="Acceptance Trend">
+      <ChartCard
+        title="Acceptance Trend"
+        description="Weekly first-pass acceptance rate — are your AI-assisted PRs improving over time?"
+      >
         {trendLoading ? <Skeleton className="h-75" /> : trend?.length ? (
-          <SwissLineChart data={trend} xKey="week" series={[{ dataKey: "rate", label: "Acceptance %" }]} tooltipFormatter={(value) => `${value.toFixed(1)}%`} />
+          <SwissLineChart
+            data={trend}
+            xKey="week"
+            series={[{ dataKey: "rate", label: "Acceptance %" }]}
+            tooltipFormatter={(v) => `${v.toFixed(1)}%`}
+            yAxisFormatter={(v) => `${v}%`}
+          />
         ) : (
-          <p className="text-sm text-text-tertiary py-12 text-center">No trend data yet.</p>
+          <EmptyState title="No trend data" description="Trend data appears after multiple weeks of activity." compact />
         )}
       </ChartCard>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <ChartCard title="By Tool" className="h-full">
+        <ChartCard
+          title="Effectiveness by Tool"
+          description="How each AI tool impacts PR outcomes — find your best-performing tools"
+          className="h-full"
+        >
           {toolsLoading ? <Skeleton className="h-50" /> : toolEffectiveness?.length ? (
             <SwissGroupedBar
               items={toolEffectiveness.map((t) => ({
@@ -106,11 +134,15 @@ export default function EffectivenessPage() {
               }))}
             />
           ) : (
-            <p className="text-sm text-text-tertiary py-12 text-center">No tool data.</p>
+            <EmptyState title="No tool data" compact />
           )}
         </ChartCard>
 
-        <ChartCard title="You vs Team Average" className="h-full">
+        <ChartCard
+          title="You vs Team Average"
+          description="How your PR outcomes compare — below team rejection rate is a positive signal"
+          className="h-full"
+        >
           {comparisonLoading ? <Skeleton className="h-50" /> : comparison ? (
             <SwissComparisonBar
               items={[
@@ -120,7 +152,7 @@ export default function EffectivenessPage() {
               ]}
             />
           ) : (
-            <p className="text-sm text-text-tertiary py-12 text-center">No comparison data.</p>
+            <EmptyState title="No comparison data" compact />
           )}
         </ChartCard>
       </div>

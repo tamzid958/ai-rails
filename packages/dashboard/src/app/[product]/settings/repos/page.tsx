@@ -16,7 +16,9 @@ import { ForbiddenPage } from "@/components/ui/forbidden-page";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Plus } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Plus, GitBranch } from "lucide-react";
 
 export default function SettingsReposPage() {
   const { product, isMember } = useProduct();
@@ -103,15 +105,31 @@ export default function SettingsReposPage() {
                       {repo.webhookActive ? "ACTIVE" : "PENDING"}
                     </Badge>
                   </TableCell>
-                  <TableCell>{repo.lastEventAt ? formatDistanceToNow(new Date(repo.lastEventAt), { addSuffix: true }) : "\u2014"}</TableCell>
-                  <TableCell>{format(new Date(repo.createdAt), "MMM d, yyyy")}</TableCell>
+                  <TableCell>
+                    {repo.lastEventAt ? (
+                      <Tooltip content={format(new Date(repo.lastEventAt), "PPpp")}>
+                        <span className="text-xs text-text-muted">{formatDistanceToNow(new Date(repo.lastEventAt), { addSuffix: true })}</span>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-xs text-text-muted">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Tooltip content={format(new Date(repo.createdAt), "PPpp")}>
+                      <span className="text-xs text-text-muted">{formatDistanceToNow(new Date(repo.createdAt), { addSuffix: true })}</span>
+                    </Tooltip>
+                  </TableCell>
                   <TableCell>
                     <Button size="sm" variant="ghost" onClick={() => setRemoveId(repo.id)} className="text-danger">Remove</Button>
                   </TableCell>
                 </TableRow>
               ))}
               {repos?.length === 0 && (
-                <TableRow><TableCell className="text-center text-text-tertiary py-8">No repositories linked yet.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={6}>
+                    <EmptyState title="No repositories" description="Link a repository to start tracking AI activity." icon={<GitBranch size={32} />} compact />
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>

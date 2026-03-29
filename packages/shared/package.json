@@ -1,16 +1,27 @@
 {
   "name": "@airails/shared",
-  "version": "0.0.1",
-  "private": true,
+  "version": "0.1.0",
   "license": "BUSL-1.1",
+  "description": "Shared utilities for the AIRails platform",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tamzid958/ai-rails.git",
+    "directory": "packages/shared"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
     "build": "prisma generate --schema ../../prisma/schema.prisma && tsc",

@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { useProduct } from "@/lib/product-context";
 import { api } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
@@ -13,6 +13,8 @@ import { ChartCard } from "@/components/ui/chart-card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogBody, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Tooltip } from "@/components/ui/tooltip";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Plus, Copy, Check, Key } from "lucide-react";
 
 export default function ApiKeysPage() {
@@ -111,15 +113,31 @@ export default function ApiKeysPage() {
                 <TableRow key={key.id}>
                   <TableCell>{key.label}</TableCell>
                   <TableCell mono>{key.keyPrefix}</TableCell>
-                  <TableCell>{formatDistanceToNow(new Date(key.createdAt), { addSuffix: true })}</TableCell>
-                  <TableCell>{key.lastUsedAt ? formatDistanceToNow(new Date(key.lastUsedAt), { addSuffix: true }) : "Never"}</TableCell>
+                  <TableCell>
+                    <Tooltip content={format(new Date(key.createdAt), "PPpp")}>
+                      <span className="text-xs text-text-muted">{formatDistanceToNow(new Date(key.createdAt), { addSuffix: true })}</span>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>
+                    {key.lastUsedAt ? (
+                      <Tooltip content={format(new Date(key.lastUsedAt), "PPpp")}>
+                        <span className="text-xs text-text-muted">{formatDistanceToNow(new Date(key.lastUsedAt), { addSuffix: true })}</span>
+                      </Tooltip>
+                    ) : (
+                      <span className="text-xs text-text-muted">Never</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Button size="sm" variant="ghost" onClick={() => setRevokeId(key.id)} className="text-danger">Revoke</Button>
                   </TableCell>
                 </TableRow>
               ))}
               {keys?.length === 0 && (
-                <TableRow><TableCell className="text-center text-text-tertiary py-8">No API keys yet.</TableCell></TableRow>
+                <TableRow>
+                  <TableCell colSpan={5}>
+                    <EmptyState title="No API keys" description="Create a key for gateway integration." icon={<Key size={32} />} compact />
+                  </TableCell>
+                </TableRow>
               )}
             </TableBody>
           </Table>

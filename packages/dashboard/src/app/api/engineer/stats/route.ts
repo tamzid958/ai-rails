@@ -35,12 +35,10 @@ export async function GET(request: NextRequest) {
     previousAiPrs,
     currentMergedPrs,
     previousMergedPrs,
-    currentTotalAiPrs,
-    previousTotalAiPrs,
     currentSessions,
     previousSessions,
-    currentActiveDays,
-    previousActiveDays,
+    currentActiveDaysResult,
+    previousActiveDaysResult,
   ] = await Promise.all([
     // AI-assisted PRs (current)
     prisma.prEvent.count({
@@ -76,22 +74,6 @@ export async function GET(request: NextRequest) {
         openedAt: { gte: previousStart, lte: previousEnd },
       },
     }),
-    // Total AI PRs for acceptance rate (current)
-    prisma.prEvent.count({
-      where: {
-        ...baseWhere,
-        aiActivitiesCount: { gt: 0 },
-        openedAt: { gte: currentStart, lte: currentEnd },
-      },
-    }),
-    // Total AI PRs for acceptance rate (previous)
-    prisma.prEvent.count({
-      where: {
-        ...baseWhere,
-        aiActivitiesCount: { gt: 0 },
-        openedAt: { gte: previousStart, lte: previousEnd },
-      },
-    }),
     // Total sessions (current)
     prisma.aiActivity.count({
       where: {
@@ -106,37 +88,35 @@ export async function GET(request: NextRequest) {
         createdAt: { gte: previousStart, lte: previousEnd },
       },
     }),
-    // Active days (current) — distinct dates
-    prisma.aiActivity.findMany({
-      where: {
-        ...baseWhere,
-        createdAt: { gte: currentStart, lte: currentEnd },
-      },
-      select: { createdAt: true },
-    }),
+    // Active days (current) — COUNT(DISTINCT DATE) via raw SQL
+    prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(DISTINCT DATE("createdAt")) as count
+      FROM "AiActivity"
+      WHERE "productId" = ${productId}
+        AND "engineerId" = ${engineer.id}
+        AND "createdAt" >= ${currentStart}
+        AND "createdAt" <= ${currentEnd}
+    `,
     // Active days (previous)
-    prisma.aiActivity.findMany({
-      where: {
-        ...baseWhere,
-        createdAt: { gte: previousStart, lte: previousEnd },
-      },
-      select: { createdAt: true },
-    }),
+    prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(DISTINCT DATE("createdAt")) as count
+      FROM "AiActivity"
+      WHERE "productId" = ${productId}
+        AND "engineerId" = ${engineer.id}
+        AND "createdAt" >= ${previousStart}
+        AND "createdAt" <= ${previousEnd}
+    `,
   ]);
 
-  const countDistinctDays = (records: { createdAt: Date }[]): number => {
-    const days = new Set(records.map((r) => r.createdAt.toISOString().split("T")[0]));
-    return days.size;
-  };
+  const currentActiveDayCount = Number(currentActiveDaysResult[0]?.count ?? 0);
+  const previousActiveDayCount = Number(previousActiveDaysResult[0]?.count ?? 0);
 
-  const currentActiveDayCount = countDistinctDays(currentActiveDays);
-  const previousActiveDayCount = countDistinctDays(previousActiveDays);
-
-  const currentAcceptanceRate = currentTotalAiPrs > 0
-    ? Math.round((currentMergedPrs / currentTotalAiPrs) * 100)
+  // Reuse currentAiPrs / previousAiPrs as totalAiPrs (identical queries removed)
+  const currentAcceptanceRate = currentAiPrs > 0
+    ? Math.round((currentMergedPrs / currentAiPrs) * 100)
     : 0;
-  const previousAcceptanceRate = previousTotalAiPrs > 0
-    ? Math.round((previousMergedPrs / previousTotalAiPrs) * 100)
+  const previousAcceptanceRate = previousAiPrs > 0
+    ? Math.round((previousMergedPrs / previousAiPrs) * 100)
     : 0;
 
   return NextResponse.json({

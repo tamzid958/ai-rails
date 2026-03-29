@@ -179,6 +179,13 @@ export type TeamEngineerRow = {
   dataRichness: "FULL" | "TAGGED" | "HEURISTIC" | "NONE";
 };
 
+export type TeamEngineersResponse = {
+  items: TeamEngineerRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+};
+
 export type TeamPromptRow = {
   taskType: string;
   baseId: string;
@@ -373,7 +380,10 @@ export type AuditLogRow = {
 
 export type AuditLogResponse = {
   items: AuditLogRow[];
-  cursor: string | null;
+  total: number;
+  page: number;
+  pageSize: number;
+  stats: Record<string, number>;
 };
 
 // ── Recommendation types ──
@@ -569,11 +579,18 @@ export const api = {
     );
   },
 
-  getTeamEngineers(productId: string, period: Period) {
+  getTeamEngineers(
+    productId: string,
+    period: Period,
+    opts?: { page?: number; pageSize?: number; sortBy?: string; sortOrder?: string },
+  ) {
     const { start, end } = periodToRange(period);
-    return fetchJson<TeamEngineerRow[]>(
-      `/api/team/engineers?productId=${productId}&start=${start}&end=${end}`,
-    );
+    const qs = new URLSearchParams({ productId, start, end });
+    if (opts?.page != null) qs.set("page", String(opts.page));
+    if (opts?.pageSize != null) qs.set("pageSize", String(opts.pageSize));
+    if (opts?.sortBy) qs.set("sortBy", opts.sortBy);
+    if (opts?.sortOrder) qs.set("sortOrder", opts.sortOrder);
+    return fetchJson<TeamEngineersResponse>(`/api/team/engineers?${qs.toString()}`);
   },
 
   getTeamPrompts(productId: string) {
@@ -638,7 +655,7 @@ export const api = {
 
   getTeamOutcomes(productId: string, params?: Record<string, string>) {
     const qs = new URLSearchParams({ productId, ...params });
-    return fetchJson<{ items: PrOutcomeRow[]; stats: PrOutcomeStats }>(
+    return fetchJson<{ items: PrOutcomeRow[]; stats: PrOutcomeStats; total: number; page: number; pageSize: number }>(
       `/api/team/outcomes?${qs.toString()}`,
     );
   },
@@ -782,12 +799,22 @@ export const api = {
     );
   },
 
-  getPromptAudit(productId: string, params?: { promptTemplateId?: string; engineerId?: string; action?: string; cursor?: string }) {
+  getPromptAudit(
+    productId: string,
+    params?: {
+      promptTemplateId?: string;
+      engineerId?: string;
+      action?: string;
+      page?: string;
+      pageSize?: string;
+    },
+  ) {
     const qs = new URLSearchParams({ productId });
     if (params?.promptTemplateId) qs.set("promptTemplateId", params.promptTemplateId);
     if (params?.engineerId) qs.set("engineerId", params.engineerId);
     if (params?.action) qs.set("action", params.action);
-    if (params?.cursor) qs.set("cursor", params.cursor);
+    if (params?.page) qs.set("page", params.page);
+    if (params?.pageSize) qs.set("pageSize", params.pageSize);
     return fetchJson<AuditLogResponse>(`/api/team/audit?${qs.toString()}`);
   },
 

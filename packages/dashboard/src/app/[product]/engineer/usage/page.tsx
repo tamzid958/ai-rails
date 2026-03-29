@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useProduct } from "@/lib/product-context";
 import { api, type Period } from "@/lib/api-client";
@@ -9,10 +9,10 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ChartCard } from "@/components/ui/chart-card";
+import { InsightBlock, InsightCallout } from "@/components/ui/insight-block";
 import { PeriodSelector } from "@/components/engineer/period-selector";
 import { SwissLineChart, SwissAreaChart } from "@/components/charts/swiss-line-chart";
-import { SwissDonutChart } from "@/components/charts/swiss-donut-chart";
-import { Activity } from "lucide-react";
+import { Activity, AlertTriangle } from "lucide-react";
 
 export default function UsagePage() {
   const { product } = useProduct();
@@ -35,17 +35,44 @@ export default function UsagePage() {
     enabled: usageStats?.hasGatewayData !== false,
   });
 
-  const { data: models, isLoading: modelsLoading } = useQuery({
+  const { data: models } = useQuery({
     queryKey: ["engineer-models", product.id, period],
     queryFn: () => api.getModelDistribution(product.id, period),
     enabled: usageStats?.hasGatewayData !== false,
   });
 
-  const { data: taskTypes, isLoading: taskTypesLoading } = useQuery({
+  const { data: taskTypes } = useQuery({
     queryKey: ["engineer-task-types", product.id, period],
     queryFn: () => api.getTaskTypeBreakdown(product.id, period),
     enabled: usageStats?.hasGatewayData !== false,
   });
+
+  // Compute efficiency insights from already-fetched data
+  const efficiencyInsights = useMemo(() => {
+    if (!usageStats || !usageStats.hasGatewayData) return null;
+
+    const totalRequests = models?.reduce((s, m) => s + m.count, 0) ?? 0;
+    const costPerRequest = totalRequests > 0
+      ? usageStats.totalCost / totalRequests
+      : 0;
+
+    // Token efficiency: output/input ratio — higher = model generates more per token sent
+    const totalInput = tokenTrend?.reduce((s, t) => s + t.input, 0) ?? 0;
+    const totalOutput = tokenTrend?.reduce((s, t) => s + t.output, 0) ?? 0;
+    const outputRatio = totalInput > 0 ? totalOutput / totalInput : 0;
+
+    // Most used model
+    const topModel = models?.length
+      ? [...models].sort((a, b) => b.count - a.count)[0]
+      : null;
+
+    // Most expensive task type (by volume — proxy for cost)
+    const topTaskType = taskTypes?.length
+      ? [...taskTypes].sort((a, b) => b.count - a.count)[0]
+      : null;
+
+    return { costPerRequest, outputRatio, totalRequests, topModel, topTaskType };
+  }, [usageStats, models, tokenTrend, taskTypes]);
 
   if (!statsLoading && usageStats && !usageStats.hasGatewayData) {
     return (
@@ -82,51 +109,84 @@ export default function UsagePage() {
         <div className="grid grid-cols-3 gap-4 stagger">
           <StatCard title="Total Tokens" value={usageStats.totalTokens.toLocaleString()} />
           <StatCard title="Total Cost" value={`$${usageStats.totalCost.toFixed(2)}`} />
-          <StatCard title="Avg Latency" value={usageStats.avgLatency > 0 ? `${usageStats.avgLatency}ms` : "\u2014"} />
+          <StatCard title="Avg Latency" value={usageStats.avgLatency > 0 ? `${usageStats.avgLatency}ms` : "—"} />
         </div>
       ) : null}
 
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 lg:col-span-8">
-          <ChartCard title="Token Trend" className="h-full">
-            {tokensLoading ? <Skeleton className="h-75" /> : tokenTrend?.length ? (
-              <SwissLineChart data={tokenTrend} xKey="date" series={[{ dataKey: "input", label: "Input" }, { dataKey: "output", label: "Output" }]} tooltipFormatter={(value, name) => `${name}: ${value.toLocaleString()}`} />
-            ) : (
-              <p className="text-sm text-text-tertiary py-12 text-center">No token data for this period.</p>
-            )}
-          </ChartCard>
-        </div>
-        <div className="col-span-12 lg:col-span-4">
-          <ChartCard title="Model Distribution" className="h-full">
-            {modelsLoading ? <Skeleton className="h-75" /> : models?.length ? (
-              <SwissDonutChart items={models.map((m) => ({ label: m.model, value: m.count }))} maxItems={5} />
-            ) : (
-              <p className="text-sm text-text-tertiary py-12 text-center">No model data.</p>
-            )}
-          </ChartCard>
-        </div>
-      </div>
+      {/* Efficiency callout */}
+      {efficiencyInsights && efficiencyInsights.outputRatio > 2 && (
+        <InsightCallout icon={<AlertTriangle size={14} />} variant="warning">
+          Output/input ratio is {efficiencyInsights.outputRatio.toFixed(1)}x — consider shorter prompts or constraining output length to reduce cost
+        </InsightCallout>
+      )}
 
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 lg:col-span-8">
-          <ChartCard title="Cost Trend" className="h-full">
-            {costsLoading ? <Skeleton className="h-75" /> : costTrend?.length ? (
-              <SwissAreaChart data={costTrend} xKey="date" dataKey="cost" label="Cost (USD)" tooltipFormatter={(value) => `$${value.toFixed(2)}`} />
-            ) : (
-              <p className="text-sm text-text-tertiary py-12 text-center">No cost data for this period.</p>
-            )}
-          </ChartCard>
-        </div>
-        <div className="col-span-12 lg:col-span-4">
-          <ChartCard title="Task Types" className="h-full">
-            {taskTypesLoading ? <Skeleton className="h-75" /> : taskTypes?.length ? (
-              <SwissDonutChart items={taskTypes.map((t) => ({ label: t.taskType, value: t.count }))} maxItems={5} />
-            ) : (
-              <p className="text-sm text-text-tertiary py-12 text-center">No task type data.</p>
-            )}
-          </ChartCard>
-        </div>
-      </div>
+      {/* Efficiency breakdown — replaces model & task type donuts */}
+      {efficiencyInsights && (
+        <InsightBlock
+          items={[
+            {
+              label: "Cost per request",
+              value: `$${efficiencyInsights.costPerRequest.toFixed(4)}`,
+              detail: `${efficiencyInsights.totalRequests.toLocaleString()} total requests`,
+            },
+            {
+              label: "Output/input ratio",
+              value: `${efficiencyInsights.outputRatio.toFixed(2)}x`,
+              detail: efficiencyInsights.outputRatio > 1.5 ? "model generates more than you send" : "balanced prompting",
+              sentiment: efficiencyInsights.outputRatio <= 1.5 ? "positive" : "neutral",
+            },
+            ...(efficiencyInsights.topModel ? [{
+              label: "Primary model",
+              value: efficiencyInsights.topModel.model,
+              detail: `${efficiencyInsights.topModel.count} requests`,
+            }] : []),
+            ...(efficiencyInsights.topTaskType ? [{
+              label: "Top task type",
+              value: efficiencyInsights.topTaskType.taskType,
+              detail: `${efficiencyInsights.topTaskType.count} sessions`,
+            }] : []),
+          ]}
+        />
+      )}
+
+      {/* Token Trend — answers: "Am I burning more tokens over time?" */}
+      <ChartCard
+        title="Token Consumption"
+        description="Daily input vs output tokens — a growing gap signals prompt bloat or unconstrained output"
+      >
+        {tokensLoading ? <Skeleton className="h-75" /> : tokenTrend?.length ? (
+          <SwissLineChart
+            data={tokenTrend}
+            xKey="date"
+            series={[
+              { dataKey: "input", label: "Input Tokens" },
+              { dataKey: "output", label: "Output Tokens" },
+            ]}
+            tooltipFormatter={(v, name) => `${name}: ${v.toLocaleString()} tokens`}
+          />
+        ) : (
+          <EmptyState title="No token data" description="No gateway-captured tokens for this period." compact />
+        )}
+      </ChartCard>
+
+      {/* Cost Trend — answers: "Is my spend under control?" */}
+      <ChartCard
+        title="Cost Trend"
+        description="Daily spend — identify spikes before they compound into budget overruns"
+      >
+        {costsLoading ? <Skeleton className="h-75" /> : costTrend?.length ? (
+          <SwissAreaChart
+            data={costTrend}
+            xKey="date"
+            dataKey="cost"
+            label="Cost (USD)"
+            tooltipFormatter={(v) => `$${v.toFixed(2)}`}
+            yAxisFormatter={(v) => `$${v}`}
+          />
+        ) : (
+          <EmptyState title="No cost data" description="No gateway-captured costs for this period." compact />
+        )}
+      </ChartCard>
     </div>
   );
 }

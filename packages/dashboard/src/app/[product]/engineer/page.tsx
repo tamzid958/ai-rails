@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { formatDistanceToNow, format } from "date-fns";
 import { useProduct } from "@/lib/product-context";
 import { api, type Period } from "@/lib/api-client";
 import { PageHeader } from "@/components/layout/page-header";
@@ -11,13 +11,15 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Tooltip } from "@/components/ui/tooltip";
 import { ChartCard } from "@/components/ui/chart-card";
+import { InsightBlock, InsightCallout } from "@/components/ui/insight-block";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { RichnessBadge } from "@/components/data-richness/richness-badge";
 import { PeriodSelector } from "@/components/engineer/period-selector";
 import { TaggingBanner } from "@/components/engineer/tagging-banner";
 import { SwissAreaChart } from "@/components/charts/swiss-line-chart";
-import { SwissDonutChart } from "@/components/charts/swiss-donut-chart";
 import { SuggestionsCard } from "@/components/recommendations/suggestions-card";
 
 const CAPTURE_BADGE_VARIANT = {
@@ -40,7 +42,7 @@ export default function EngineerOverviewPage() {
     queryFn: () => api.getTimeline(product.id, period),
   });
 
-  const { data: tools, isLoading: toolsLoading } = useQuery({
+  const { data: tools } = useQuery({
     queryKey: ["engineer-tools", product.id, period],
     queryFn: () => api.getToolDistribution(product.id, period),
   });
@@ -59,23 +61,39 @@ export default function EngineerOverviewPage() {
   const totalActivities = activitiesData?.total ?? 0;
   const hasNextPage = !!activitiesData?.cursor;
 
+  const keyInsights = useMemo(() => {
+    if (!stats || !tools) return null;
+    const sorted = [...(tools ?? [])].sort((a, b) => b.count - a.count);
+    const topTool = sorted[0];
+    const totalToolSessions = sorted.reduce((s, t) => s + t.count, 0);
+    const topToolPct = topTool && totalToolSessions > 0
+      ? Math.round((topTool.count / totalToolSessions) * 100)
+      : 0;
+    const sessionsPerDay = stats.activeDays > 0
+      ? (stats.totalSessions / stats.activeDays).toFixed(1)
+      : "0";
+    const prYield = stats.totalSessions > 0
+      ? ((stats.aiAssistedPrs / stats.totalSessions) * 100).toFixed(0)
+      : "0";
+
+    return { topTool, topToolPct, sessionsPerDay, toolCount: sorted.length, prYield };
+  }, [stats, tools]);
+
   function goNext() {
     if (!activitiesData?.cursor) return;
-    const nextCursor = activitiesData.cursor;
-    setCursorHistory((prev) => [...prev, nextCursor]);
-    setActivityCursor(nextCursor);
+    setCursorHistory((prev) => [...prev, activitiesData.cursor ?? undefined]);
+    setActivityCursor(activitiesData.cursor);
     setActivityPage((p) => p + 1);
   }
 
   function goPrev() {
     if (activityPage === 0) return;
-    const prevCursor = cursorHistory[activityPage - 1];
-    setActivityCursor(prevCursor);
+    setActivityCursor(cursorHistory[activityPage - 1]);
     setActivityPage((p) => p - 1);
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
         <PageHeader title="Overview" className="mb-0 pb-0" />
         <div className="mt-3 sm:mt-0">
@@ -85,6 +103,7 @@ export default function EngineerOverviewPage() {
 
       <TaggingBanner />
 
+      {/* KPI cards */}
       {statsLoading ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-20" />)}
@@ -98,63 +117,98 @@ export default function EngineerOverviewPage() {
         </div>
       ) : null}
 
+      {/* Computed insights */}
+      {keyInsights && (
+        <InsightBlock
+          items={[
+            {
+              label: "Primary tool",
+              value: keyInsights.topTool ? `${keyInsights.topTool.tool} (${keyInsights.topToolPct}%)` : "—",
+              detail: keyInsights.toolCount > 1 ? `${keyInsights.toolCount} tools used` : undefined,
+            },
+            {
+              label: "Sessions / active day",
+              value: keyInsights.sessionsPerDay,
+              detail: `${stats?.activeDays ?? 0} active days`,
+            },
+            {
+              label: "PR yield rate",
+              value: `${keyInsights.prYield}%`,
+              detail: "sessions that led to a PR",
+              sentiment: Number(keyInsights.prYield) >= 30 ? "positive" : "neutral",
+            },
+          ]}
+        />
+      )}
+
+      {stats && stats.acceptanceRate >= 70 && (
+        <InsightCallout icon={<TrendingUp size={14} />} variant="success">
+          {stats.acceptanceRate.toFixed(0)}% of your AI-assisted PRs are accepted first-pass — above the 70% benchmark
+        </InsightCallout>
+      )}
+
       <SuggestionsCard />
 
-      <div className="grid grid-cols-12 gap-4">
-        <div className="col-span-12 lg:col-span-8">
-          <ChartCard title="Activity Timeline" className="h-full">
-            {timelineLoading ? <Skeleton className="h-75" /> : timeline?.length ? (
-              <SwissAreaChart data={timeline} xKey="date" dataKey="count" label="Activities" />
-            ) : (
-              <p className="text-sm text-text-tertiary text-center py-12">No activity data for this period.</p>
-            )}
-          </ChartCard>
-        </div>
-        <div className="col-span-12 lg:col-span-4">
-          <ChartCard title="Tool Distribution" className="h-full">
-            {toolsLoading ? <Skeleton className="h-75" /> : tools?.length ? (
-              <SwissDonutChart items={tools.map((t) => ({ label: t.tool, value: t.count }))} maxItems={5} />
-            ) : (
-              <p className="text-sm text-text-tertiary text-center py-12">No tool data.</p>
-            )}
-          </ChartCard>
-        </div>
-      </div>
+      {/* Activity Timeline */}
+      <ChartCard
+        title="Activity Timeline"
+        description="Daily AI-assisted sessions — spot productivity patterns and consistency"
+      >
+        {timelineLoading ? <Skeleton className="h-75" /> : timeline?.length ? (
+          <SwissAreaChart
+            data={timeline}
+            xKey="date"
+            dataKey="count"
+            label="Sessions"
+            tooltipFormatter={(v) => `${v} session${v !== 1 ? "s" : ""}`}
+          />
+        ) : (
+          <EmptyState title="No activity data" description="No activity recorded for this period." compact />
+        )}
+      </ChartCard>
 
+      {/* Recent Activity */}
       <ChartCard
         title="Recent Activity"
-        action={totalActivities > 0 ? <span className="text-xs text-gray-400 tabular-nums">{totalActivities} total</span> : undefined}
+        action={totalActivities > 0 ? <span className="text-xs text-text-muted tabular-nums">{totalActivities} total</span> : undefined}
       >
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Time</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Tool</TableHead>
-              <TableHead>Branch</TableHead>
-              <TableHead>Data</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {activities.map((a) => (
-              <TableRow key={a.id}>
-                <TableCell mono>{formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}</TableCell>
-                <TableCell>
-                  <span className="flex items-center gap-1">
-                    <Badge variant={CAPTURE_BADGE_VARIANT[a.captureMethod]}>{a.captureMethod}</Badge>
-                    {a.captureMethod === "HEURISTIC" && <Badge variant="warning">EST</Badge>}
-                  </span>
-                </TableCell>
-                <TableCell>{a.tool ?? "\u2014"}</TableCell>
-                <TableCell mono>{a.branchName ?? "\u2014"}</TableCell>
-                <TableCell><RichnessBadge richness={a.dataRichness} /></TableCell>
+        {activities.length === 0 ? (
+          <EmptyState title="No recent activity" description="Your AI-assisted coding sessions will appear here." compact />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Time</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Tool</TableHead>
+                <TableHead>Branch</TableHead>
+                <TableHead>Data</TableHead>
               </TableRow>
-            ))}
-            {activities.length === 0 && (
-              <TableRow><TableCell className="text-center text-gray-400 py-8">No recent activity.</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {activities.map((a) => (
+                <TableRow key={a.id}>
+                  <TableCell>
+                    <Tooltip content={format(new Date(a.createdAt), "PPpp")}>
+                      <span className="text-xs text-text-muted">
+                        {formatDistanceToNow(new Date(a.createdAt), { addSuffix: true })}
+                      </span>
+                    </Tooltip>
+                  </TableCell>
+                  <TableCell>
+                    <span className="flex items-center gap-1">
+                      <Badge variant={CAPTURE_BADGE_VARIANT[a.captureMethod]}>{a.captureMethod}</Badge>
+                      {a.captureMethod === "HEURISTIC" && <Badge variant="warning">EST</Badge>}
+                    </span>
+                  </TableCell>
+                  <TableCell>{a.tool ?? "—"}</TableCell>
+                  <TableCell mono>{a.branchName ?? "—"}</TableCell>
+                  <TableCell><RichnessBadge richness={a.dataRichness} /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
         {(activityPage > 0 || hasNextPage) && (
           <div className="mt-4 flex items-center justify-between">
             <Button variant="ghost" size="sm" disabled={activityPage === 0} onClick={goPrev}>
@@ -167,7 +221,7 @@ export default function EngineerOverviewPage() {
           </div>
         )}
         {activities.some((a) => a.captureMethod === "HEURISTIC") && (
-          <p className="text-xs text-gray-400 mt-4">
+          <p className="text-xs text-text-muted mt-4">
             Includes estimated data — heuristic records are detected via code pattern analysis and may not reflect confirmed AI usage.
           </p>
         )}
