@@ -1,15 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { prisma, Forbidden, NotFound } from "@airails/shared";
+import { prisma, Forbidden, NotFound, PromptTemplateRequestSchema } from "@airails/shared";
 import { requireRole } from "../auth/role-guard.js";
-import { z } from "zod";
-
-const CreatePromptSchema = z.object({
-  taskType: z.string().min(1),
-  name: z.string().min(1).max(200),
-  content: z.string().min(1),
-  isBase: z.boolean().default(true),
-  parentId: z.string().uuid().nullish(),
-});
 
 export async function promptRoutes(app: FastifyInstance): Promise<void> {
   // List templates for this product
@@ -30,7 +21,7 @@ export async function promptRoutes(app: FastifyInstance): Promise<void> {
   // Create template
   app.post("/prompts", async (request: FastifyRequest, reply: FastifyReply) => {
     const { productId, engineerId, role } = request.productContext;
-    const data = CreatePromptSchema.parse(request.body);
+    const data = PromptTemplateRequestSchema.parse(request.body);
 
     // Base templates require OWNER/LEAD
     if (data.isBase && role === "MEMBER") {

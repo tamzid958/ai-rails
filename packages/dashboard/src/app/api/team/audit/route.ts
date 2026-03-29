@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineerOrNull } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
 const PAGE_SIZE = 20;
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineerOrNull();
   if (!engineer) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -88,4 +89,4 @@ export async function GET(request: NextRequest) {
   stats["ALL"] = totalAll;
 
   return NextResponse.json({ items, total, page, pageSize, stats });
-}
+});

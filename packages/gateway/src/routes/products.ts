@@ -21,9 +21,20 @@ export async function productRoutes(app: FastifyInstance): Promise<void> {
     reply.send({ items, total: items.length, cursor: null });
   });
 
-  // Create product (any authenticated engineer becomes OWNER)
+  // Create product (OWNER-gated when PRODUCT_CREATION=owners)
   app.post("/", async (request: FastifyRequest, reply: FastifyReply) => {
     const { engineerId } = request.productContext;
+
+    const productCreation = process.env["PRODUCT_CREATION"] ?? "anyone";
+    if (productCreation === "owners") {
+      const isOwner = await prisma.productMembership.findFirst({
+        where: { engineerId, role: "OWNER" },
+      });
+      if (!isOwner) {
+        throw new Forbidden("Only product owners can create new products");
+      }
+    }
+
     const data = ProductCreateSchema.parse(request.body);
 
     const product = await prisma.product.create({

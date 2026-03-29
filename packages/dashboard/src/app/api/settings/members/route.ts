@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
-import { prisma, generateApiKey } from "@airails/shared";
+import { prisma, generateApiKey, assertCanAssignRole } from "@airails/shared";
 import { apiHandler } from "@/lib/api-handler";
 
 export const GET = apiHandler(async (request: NextRequest) => {
@@ -62,9 +62,11 @@ export const POST = apiHandler(async (request: NextRequest) => {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  if (membership.role === "LEAD" && role === "OWNER") {
+  try {
+    assertCanAssignRole(membership.role as "OWNER" | "LEAD" | "MEMBER", role as "OWNER" | "LEAD" | "MEMBER");
+  } catch {
     return NextResponse.json(
-      { error: "LEADs cannot add OWNERs" },
+      { error: "LEADs cannot assign the OWNER role" },
       { status: 403 },
     );
   }

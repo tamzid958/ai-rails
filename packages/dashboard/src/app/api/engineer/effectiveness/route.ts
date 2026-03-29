@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
 
@@ -58,4 +59,4 @@ export async function GET(request: NextRequest) {
     totalPrs: total,
     sufficient: total >= 5,
   });
-}
+});

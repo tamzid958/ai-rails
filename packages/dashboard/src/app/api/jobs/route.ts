@@ -1,8 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineerOrNull } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineerOrNull();
   if (!engineer) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -44,4 +45,4 @@ export async function POST(request: NextRequest) {
     console.warn(`[jobs] gateway unreachable for "${job}":`, err);
     return NextResponse.json({ success: true, job, note: "Gateway unreachable, data will refresh on next load" });
   }
-}
+});

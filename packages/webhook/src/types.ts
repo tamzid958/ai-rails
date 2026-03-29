@@ -174,46 +174,9 @@ export interface RecommendationsJob {
   productId: string;
 }
 
-// ── Heuristics ──
+// ── Re-exports from canonical module locations ──
 
-export interface SignalResult {
-  signal: string;
-  confidence: number;
-  details: string;
-}
-
-export interface AnalysisResult {
-  signals: SignalResult[];
-  combinedConfidence: number;
-  recorded: boolean;
-}
-
-// ── Correlation ──
-
-export interface CorrelationInput {
-  productId: string;
-  prEventId: string;
-  branchName: string;
-  engineerId: string;
-  openedAt: Date;
-}
-
-import type { DataRichness } from "@prisma/client";
-
-export type { DataRichness };
-
-export interface CorrelationResult {
-  linked: number;
-  richness: DataRichness;
-}
-
-// ── Recommendations ──
-
-export interface RecommendationData {
-  engineerId: string | null;
-  type: string;
-  title: string;
-  body: string;
-  priority: number;
-  data: Record<string, unknown>;
-}
+export type { SignalResult } from "./heuristics/signals.js";
+export type { AnalysisResult } from "./heuristics/analyzer.js";
+export type { CorrelationInput, CorrelationResult } from "./correlation/matcher.js";
+export type { RecommendationData } from "./recommendations/rules.js";

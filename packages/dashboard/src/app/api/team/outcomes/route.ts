@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
 const PAGE_SIZE = 20;
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
@@ -103,4 +104,4 @@ export async function GET(request: NextRequest) {
   };
 
   return NextResponse.json({ items, stats, total, page, pageSize });
-}
+});

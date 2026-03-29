@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
 import { logPromptAudit } from "@/lib/audit";
+import { apiHandler } from "@/lib/api-handler";
 
 async function getAcceptRateForTemplate(
   productId: string,
@@ -31,7 +32,7 @@ async function getAcceptRateForTemplate(
   return total > 0 ? Math.round((merged / total) * 10000) / 100 : null;
 }
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
@@ -96,9 +97,9 @@ export async function GET(request: NextRequest) {
   );
 
   return NextResponse.json(rows);
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const body = await request.json();
   const { productId, taskType, name, content } = body;
@@ -147,4 +148,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ id: template.id, taskType: template.taskType });
-}
+});

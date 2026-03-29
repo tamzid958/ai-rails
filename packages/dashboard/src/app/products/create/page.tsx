@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+/** Mirror of shared/utils.ts slugify — duplicated here because this is a client component. */
 function slugify(name: string): string {
   return name
     .toLowerCase()

@@ -1,15 +1,8 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
-import { prisma } from "@airails/shared";
+import { prisma, slugify } from "@airails/shared";
 import { apiHandler } from "@/lib/api-handler";
-
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 // "anyone" = all authenticated users | "owners" = existing product OWNERs only
 const PRODUCT_CREATION = process.env.PRODUCT_CREATION ?? "anyone";

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
 const WEEKS_TO_SHOW = 12;
 
@@ -12,7 +13,7 @@ function getWeekKey(date: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
 
@@ -72,4 +73,4 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json(data);
-}
+});

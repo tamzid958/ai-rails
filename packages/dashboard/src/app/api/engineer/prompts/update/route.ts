@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
 import { logPromptAudit } from "@/lib/audit";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const body = await request.json();
   const { templateId, content } = body;
@@ -38,4 +39,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ success: true });
-}
+});

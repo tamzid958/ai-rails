@@ -2,8 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
 import { logPromptAudit } from "@/lib/audit";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
 
@@ -46,10 +47,10 @@ export async function GET(request: NextRequest) {
   }));
 
   return NextResponse.json(data);
-}
+});
 
 // Create override
-export async function POST(request: NextRequest) {
+export const POST = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const body = await request.json();
   const { productId, baseTemplateId, content } = body;
@@ -108,5 +109,5 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ id: override.id, taskType: override.taskType });
-}
+});
 

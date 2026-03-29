@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
-export async function POST(
+export const POST = apiHandler(async (
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+  context?: { params: Promise<Record<string, string>> },
+) => {
   const engineer = await getEngineer();
-  const { id } = await params;
+  const { id } = await context!.params;
 
   const recommendation = await prisma.recommendation.findUnique({
     where: { id },
@@ -39,4 +40,4 @@ export async function POST(
   });
 
   return NextResponse.json({ success: true });
-}
+});

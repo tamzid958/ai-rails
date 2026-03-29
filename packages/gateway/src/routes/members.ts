@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { prisma, AddMemberSchema, Forbidden, NotFound } from "@airails/shared";
+import { prisma, AddMemberSchema, MemberRoleSchema, Forbidden, NotFound, assertCanAssignRole } from "@airails/shared";
 import { requireRole } from "../auth/role-guard.js";
 import { z } from "zod";
 
@@ -56,10 +56,7 @@ export async function memberRoutes(app: FastifyInstance): Promise<void> {
       const { product, membership: callerMembership } = await resolveProduct(slug, engineerId);
       const data = AddMemberSchema.parse(request.body);
 
-      // LEAD can only add as MEMBER or LEAD
-      if (callerMembership.role === "LEAD" && data.role === "OWNER") {
-        throw new Forbidden("LEAD cannot assign OWNER role");
-      }
+      assertCanAssignRole(callerMembership.role as "OWNER" | "LEAD" | "MEMBER", data.role);
 
       // Find or create engineer
       let engineer = await prisma.engineer.findUnique({
@@ -111,8 +108,7 @@ export async function memberRoutes(app: FastifyInstance): Promise<void> {
       const { engineerId } = request.productContext;
       const { product } = await resolveProduct(slug, engineerId);
 
-      const RoleUpdateSchema = z.object({ role: z.enum(["OWNER", "LEAD", "MEMBER"]) });
-      const { role } = RoleUpdateSchema.parse(request.body);
+      const { role } = z.object({ role: MemberRoleSchema }).parse(request.body);
 
       const membership = await prisma.productMembership.findFirst({
         where: { id, productId: product.id },

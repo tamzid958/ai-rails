@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineerOrNull } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
 type DriftLevel = "NONE" | "LOW" | "MEDIUM" | "HIGH";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineerOrNull();
   if (!engineer) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -181,4 +182,4 @@ export async function GET(request: NextRequest) {
   rows.sort((a, b) => order[a.driftScore] - order[b.driftScore]);
 
   return NextResponse.json(rows);
-}
+});

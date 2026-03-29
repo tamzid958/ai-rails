@@ -1,13 +1,6 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
-import { prisma, Forbidden, NotFound } from "@airails/shared";
+import { prisma, Forbidden, NotFound, AddRepoSchema } from "@airails/shared";
 import { requireRole } from "../auth/role-guard.js";
-import { z } from "zod";
-
-const AddRepoSchema = z.object({
-  fullName: z.string().min(1),
-  provider: z.string().default("github"),
-  webhookActive: z.boolean().default(false),
-});
 
 async function resolveProduct(slug: string, engineerId: string) {
   const product = await prisma.product.findUnique({ where: { slug } });

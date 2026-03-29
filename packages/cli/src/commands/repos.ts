@@ -51,7 +51,8 @@ reposCommand
 reposCommand
   .command("add <fullName>")
   .description("Link a repository to the active product (org/repo)")
-  .action(async (fullName: string) => {
+  .option("-p, --provider <provider>", "Git provider", "github")
+  .action(async (fullName: string, opts: { provider: string }) => {
     const product = getActiveProduct();
     const client = createClient();
     const spin = spinner(`Linking ${fullName}...`);
@@ -59,6 +60,7 @@ reposCommand
 
     await client.post(`/api/products/${product.slug}/repos`, {
       fullName,
+      provider: opts.provider,
     });
     spin.succeed(`Linked ${fullName} to ${product.slug}`);
   });

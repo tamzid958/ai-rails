@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { apiHandler } from "@/lib/api-handler";
 
 const PAGE_SIZE = 20;
 
@@ -12,7 +13,7 @@ const DATA_RICHNESS_MAP: Record<CaptureMethod, string> = {
   HEURISTIC: "HEURISTIC",
 };
 
-export async function GET(request: NextRequest) {
+export const GET = apiHandler(async (request: NextRequest) => {
   const engineer = await getEngineer();
   const { searchParams } = new URL(request.url);
   const productId = searchParams.get("productId");
@@ -68,4 +69,4 @@ export async function GET(request: NextRequest) {
     total,
     cursor: nextCursor,
   });
-}
+});
