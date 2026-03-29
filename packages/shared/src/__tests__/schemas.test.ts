@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { ProductCreateSchema } from "../types/product.js";
-import { AddMemberSchema } from "../types/membership.js";
+import { AddMemberSchema, assertCanAssignRole } from "../types/membership.js";
 import { AiActivityCreateSchema } from "../types/ai-activity.js";
 import { PrEventCreateSchema } from "../types/pr-event.js";
-import { RepoCreateSchema } from "../types/repo.js";
+import { RepoCreateSchema, AddRepoSchema } from "../types/repo.js";
 import { ApiKeyCreateSchema } from "../types/api-key.js";
+import { PromptTemplateRequestSchema } from "../types/prompt.js";
+import { Unauthorized, Forbidden, NotFound } from "../errors.js";
 
 describe("ProductCreateSchema", () => {
   it("should_accept_valid_input", () => {
@@ -143,5 +145,116 @@ describe("ApiKeyCreateSchema", () => {
   it("should_reject_empty_label", () => {
     const result = ApiKeyCreateSchema.safeParse({ label: "" });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("AddRepoSchema", () => {
+  it("should_accept_valid_org_repo_format", () => {
+    const result = AddRepoSchema.safeParse({ fullName: "acme/my-app" });
+    expect(result.success).toBe(true);
+  });
+
+  it("should_reject_missing_slash", () => {
+    const result = AddRepoSchema.safeParse({ fullName: "my-app" });
+    expect(result.success).toBe(false);
+  });
+
+  it("should_reject_multiple_slashes", () => {
+    const result = AddRepoSchema.safeParse({ fullName: "a/b/c" });
+    expect(result.success).toBe(false);
+  });
+
+  it("should_default_provider_to_github", () => {
+    const result = AddRepoSchema.parse({ fullName: "org/repo" });
+    expect(result.provider).toBe("github");
+  });
+});
+
+describe("RepoCreateSchema fullName validation", () => {
+  it("should_reject_fullName_without_slash", () => {
+    const result = RepoCreateSchema.safeParse({
+      productId: "550e8400-e29b-41d4-a716-446655440000",
+      fullName: "noslash",
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("PromptTemplateRequestSchema", () => {
+  it("should_accept_valid_prompt_request", () => {
+    const result = PromptTemplateRequestSchema.safeParse({
+      taskType: "code-review",
+      name: "Review prompt",
+      content: "Review this code...",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("should_default_isBase_to_true", () => {
+    const result = PromptTemplateRequestSchema.parse({
+      taskType: "code-review",
+      name: "Review prompt",
+      content: "Review this code...",
+    });
+    expect(result.isBase).toBe(true);
+  });
+
+  it("should_reject_empty_taskType", () => {
+    const result = PromptTemplateRequestSchema.safeParse({
+      taskType: "",
+      name: "Review prompt",
+      content: "Review this code...",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("should_accept_nullish_parentId", () => {
+    const result = PromptTemplateRequestSchema.safeParse({
+      taskType: "code-review",
+      name: "Review prompt",
+      content: "Review this code...",
+      parentId: null,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("assertCanAssignRole", () => {
+  it("should_throw_when_LEAD_assigns_OWNER", () => {
+    expect(() => assertCanAssignRole("LEAD", "OWNER")).toThrow(Forbidden);
+  });
+
+  it("should_allow_OWNER_to_assign_OWNER", () => {
+    expect(() => assertCanAssignRole("OWNER", "OWNER")).not.toThrow();
+  });
+
+  it("should_allow_LEAD_to_assign_MEMBER", () => {
+    expect(() => assertCanAssignRole("LEAD", "MEMBER")).not.toThrow();
+  });
+
+  it("should_allow_LEAD_to_assign_LEAD", () => {
+    expect(() => assertCanAssignRole("LEAD", "LEAD")).not.toThrow();
+  });
+});
+
+describe("Error classes", () => {
+  it("should_create_Unauthorized_with_correct_statusCode", () => {
+    const err = new Unauthorized();
+    expect(err.statusCode).toBe(401);
+    expect(err.message).toBe("Unauthorized");
+    expect(err.name).toBe("Unauthorized");
+  });
+
+  it("should_create_Forbidden_with_custom_message", () => {
+    const err = new Forbidden("Nope");
+    expect(err.statusCode).toBe(403);
+    expect(err.message).toBe("Nope");
+  });
+
+  it("should_create_NotFound_with_correct_statusCode", () => {
+    const err = new NotFound();
+    expect(err.statusCode).toBe(404);
+    expect(err.message).toBe("Not found");
+    expect(err.name).toBe("NotFound");
   });
 });
