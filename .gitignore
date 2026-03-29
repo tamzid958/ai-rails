@@ -11,3 +11,4 @@ postgres_data/
 redis_data/
 .airails/.backups/
 phases/
+scripts/bump-if-changed.sh
