@@ -68,12 +68,30 @@ flowchart TD
 
 ## Quick Start
 
-```bash
-# Clone and configure
-cp .env.example .env
+### Production Deploy
 
-# Start all services
-docker compose up -d
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+The interactive script handles everything in 7 steps:
+
+1. **Prerequisites** — checks Docker, Docker Compose v2, and OpenSSL
+2. **Environment setup** — walks you through every config value (domain, secrets, OAuth, access control). Secrets are auto-generated if left empty. If `.env` already exists, you can keep it or reconfigure
+3. **Validation** — verifies required vars aren't empty or still placeholders
+4. **Build** — builds all Docker images in parallel
+5. **Migrations** — runs `prisma migrate deploy` against your database
+6. **Start** — launches all services and waits for health checks (2 min timeout)
+7. **Summary** — prints service status table with URLs and useful commands
+
+Re-running `deploy.sh` on an existing deployment is safe — it will ask before overwriting `.env` and backs up the existing one.
+
+### Local Development
+
+```bash
+cp .env.example .env   # configure manually
+docker compose up -d   # start services
 
 # Verify
 curl localhost:8080/health   # gateway
@@ -105,6 +123,7 @@ airails/
 ├── prisma/            # Database schema & migrations
 ├── litellm/           # LiteLLM proxy config
 ├── phases/            # Implementation specs (13 phases)
+├── deploy.sh          # Interactive production deploy script
 └── docker-compose.yml
 ```
 

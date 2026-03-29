@@ -173,3 +173,47 @@ export interface HeuristicsJob {
 export interface RecommendationsJob {
   productId: string;
 }
+
+// ── Heuristics ──
+
+export interface SignalResult {
+  signal: string;
+  confidence: number;
+  details: string;
+}
+
+export interface AnalysisResult {
+  signals: SignalResult[];
+  combinedConfidence: number;
+  recorded: boolean;
+}
+
+// ── Correlation ──
+
+export interface CorrelationInput {
+  productId: string;
+  prEventId: string;
+  branchName: string;
+  engineerId: string;
+  openedAt: Date;
+}
+
+import type { DataRichness } from "@prisma/client";
+
+export type { DataRichness };
+
+export interface CorrelationResult {
+  linked: number;
+  richness: DataRichness;
+}
+
+// ── Recommendations ──
+
+export interface RecommendationData {
+  engineerId: string | null;
+  type: string;
+  title: string;
+  body: string;
+  priority: number;
+  data: Record<string, unknown>;
+}
