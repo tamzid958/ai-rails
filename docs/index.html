@@ -173,6 +173,8 @@
         <nav class="hidden lg:flex items-center gap-8">
           <a href="#impact" class="text-xs tracking-wide text-white/45 hover:text-white transition-colors duration-300">Impact</a>
           <a href="#how" class="text-xs tracking-wide text-white/45 hover:text-white transition-colors duration-300">How It Works</a>
+          <a href="#deploy" class="text-xs tracking-wide text-white/45 hover:text-white transition-colors duration-300">Deploy</a>
+          <a href="https://github.com/tamzid958/ai-rails/pkgs/npm/airails" target="_blank" rel="noreferrer" class="text-xs tracking-wide text-white/45 hover:text-white transition-colors duration-300">CLI Package</a>
           <a href="https://github.com/tamzid958/ai-rails/tree/main/docs" target="_blank" rel="noreferrer" class="text-xs tracking-wide text-white/45 hover:text-white transition-colors duration-300">Docs</a>
           <a href="https://github.com/tamzid958/ai-rails" target="_blank" rel="noreferrer"
              class="text-xs font-medium tracking-wide bg-white text-base px-5 py-2 rounded-md hover:bg-accent hover:text-white hover:-translate-y-0.5 transition-all duration-300">
@@ -195,7 +197,7 @@
         <!-- Floating orb -->
         <div class="hero-orb hidden lg:block"></div>
 
-        <div class="relative z-10 max-w-[1200px] mx-auto px-6 sm:px-8 w-full py-28 lg:py-36">
+        <div class="relative z-10 max-w-[1200px] mx-auto px-6 sm:px-8 w-full py-20 lg:py-28">
           <!-- Eyebrow -->
           <div class="reveal flex items-center gap-3 mb-8">
             <span class="w-6 h-px bg-white/[0.14]"></span>
@@ -276,7 +278,7 @@
       </div>
 
       <!-- ═══════════ Metrics ═══════════ -->
-      <section class="relative z-10 py-24 lg:py-36" id="impact">
+      <section class="relative z-10 py-16 lg:py-24" id="impact">
         <div class="max-w-[1200px] mx-auto px-6 sm:px-8">
           <p class="reveal text-[11px] tracking-[0.18em] uppercase text-white/25 mb-5">Impact</p>
           <h2 class="reveal d1 text-[clamp(2.2rem,4.5vw,4.2rem)] font-light leading-[0.95] tracking-[-0.05em] max-w-[16ch]">What AIRAILS makes visible.</h2>
@@ -307,7 +309,7 @@
       </section>
 
       <!-- ═══════════ Features ═══════════ -->
-      <section class="relative z-10 py-24 lg:py-36 border-t border-white/[0.06]">
+      <section class="relative z-10 py-16 lg:py-24 border-t border-white/[0.06]">
         <div class="max-w-[1200px] mx-auto px-6 sm:px-8">
           <p class="reveal text-[11px] tracking-[0.18em] uppercase text-white/25 mb-5">Capabilities</p>
           <h2 class="reveal d1 text-[clamp(2.2rem,4.5vw,4.2rem)] font-light leading-[0.95] tracking-[-0.05em] max-w-[16ch]">One system, three audiences.</h2>
@@ -349,7 +351,7 @@
       </section>
 
       <!-- ═══════════ Statement ═══════════ -->
-      <section class="relative z-10 py-28 lg:py-40">
+      <section class="relative z-10 py-20 lg:py-28">
         <div class="max-w-[1200px] mx-auto px-6 sm:px-8">
           <div class="reveal w-12 h-px bg-gradient-to-r from-accent to-transparent mb-10"></div>
           <p class="reveal d1 text-[clamp(1.8rem,4.5vw,3.8rem)] font-light leading-[1.12] tracking-[-0.04em] max-w-[22ch]">
@@ -364,7 +366,7 @@
       </section>
 
       <!-- ═══════════ How it works ═══════════ -->
-      <section class="relative z-10 py-24 lg:py-36 border-t border-white/[0.06]" id="how">
+      <section class="relative z-10 py-16 lg:py-24 border-t border-white/[0.06]" id="how">
         <div class="max-w-[1200px] mx-auto px-6 sm:px-8">
           <p class="reveal text-[11px] tracking-[0.18em] uppercase text-white/25 mb-5">How it works</p>
           <h2 class="reveal d1 text-[clamp(2.2rem,4.5vw,4.2rem)] font-light leading-[0.95] tracking-[-0.05em] max-w-[16ch]">Three steps to governed AI.</h2>
@@ -408,8 +410,56 @@
         </div>
       </section>
 
+      <!-- ═══════════ Deploy ═══════════ -->
+      <section class="relative z-10 py-16 lg:py-24 border-t border-white/[0.06]" id="deploy">
+        <div class="max-w-[1200px] mx-auto px-6 sm:px-8">
+          <p class="reveal text-[11px] tracking-[0.18em] uppercase text-white/25 mb-5">Deploy</p>
+          <h2 class="reveal d1 text-[clamp(2.2rem,4.5vw,4.2rem)] font-light leading-[0.95] tracking-[-0.05em] max-w-[16ch]">Running in minutes.</h2>
+          <p class="reveal d2 mt-6 max-w-[52ch] text-base leading-[1.9] text-white/45 font-light">
+            One interactive script handles everything &mdash; environment setup, secret generation, Docker builds, database migrations, and health checks.
+          </p>
+
+          <div class="reveal d3 mt-16 rounded-xl border border-white/[0.06] overflow-hidden">
+            <!-- Terminal header -->
+            <div class="flex items-center gap-2 px-5 py-3 bg-surface-raised border-b border-white/[0.06]">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500/50"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/50"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-green-500/50"></span>
+              <span class="ml-3 text-[11px] tracking-wide text-white/25 font-mono">terminal</span>
+            </div>
+            <!-- Terminal body -->
+            <div class="bg-surface p-6 font-mono text-[13px] leading-[2.2] text-white/60">
+              <div><span class="text-accent">$</span> git clone https://github.com/tamzid958/ai-rails.git</div>
+              <div><span class="text-accent">$</span> cd ai-rails</div>
+              <div><span class="text-accent">$</span> chmod +x deploy.sh && ./deploy.sh</div>
+              <div class="mt-4 text-white/25"># The script walks you through:</div>
+              <div class="text-white/25"># 1. Prerequisites check (Docker, Compose v2, OpenSSL)</div>
+              <div class="text-white/25"># 2. Interactive .env setup (domain, secrets, OAuth)</div>
+              <div class="text-white/25"># 3. Validation of required variables</div>
+              <div class="text-white/25"># 4. Docker image builds (parallel)</div>
+              <div class="text-white/25"># 5. Database migrations (Prisma)</div>
+              <div class="text-white/25"># 6. Service startup with health checks</div>
+              <div class="text-white/25"># 7. Summary with URLs and useful commands</div>
+            </div>
+          </div>
+
+          <!-- CLI install -->
+          <div class="reveal d4 mt-12 rounded-xl border border-white/[0.06] overflow-hidden">
+            <div class="flex items-center gap-2 px-5 py-3 bg-surface-raised border-b border-white/[0.06]">
+              <span class="text-[11px] tracking-wide text-white/25 font-mono">cli</span>
+            </div>
+            <div class="bg-surface p-6 font-mono text-[13px] leading-[2.2] text-white/60">
+              <div><span class="text-accent">$</span> npm install -g @tamzid958/airails --registry https://npm.pkg.github.com</div>
+              <div><span class="text-accent">$</span> cd your-project</div>
+              <div><span class="text-accent">$</span> airails init</div>
+              <div class="mt-2 text-white/25"># Commit tagging, IDE config, diagnostics, and more</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- ═══════════ CTA ═══════════ -->
-      <section class="relative z-10 py-28 lg:py-40 text-center">
+      <section class="relative z-10 py-20 lg:py-28 text-center">
         <!-- Radial glow behind CTA -->
         <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[radial-gradient(ellipse,rgba(59,130,246,0.06),transparent_70%)] pointer-events-none"></div>
 
