@@ -1,0 +1,41 @@
+name: Publish CLI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/cli/**"
+      - "packages/shared/**"
+
+jobs:
+  publish:
+    name: Build & Publish @tamzid958/airails
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://npm.pkg.github.com
+          scope: "@tamzid958"
+
+      - run: npm ci
+      - run: npx prisma generate --schema prisma/schema.prisma
+      - run: npx turbo build --filter=@tamzid958/airails
+
+      - name: Publish to GitHub Packages
+        working-directory: packages/cli
+        run: |
+          CURRENT=$(npm view @tamzid958/airails version --registry=https://npm.pkg.github.com 2>/dev/null || echo "none")
+          LOCAL=$(node -p "require('./package.json').version")
+          if [ "$CURRENT" = "$LOCAL" ]; then
+            echo "Version $LOCAL already published — skipping"
+          else
+            npm publish --tag alpha
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

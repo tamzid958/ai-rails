@@ -11,24 +11,38 @@ title: "Setup Guide"
 - Node.js 22+ (for development)
 - Git
 
-## Quick Start
+## Production Deploy
+
+The interactive deploy script handles everything — environment setup, secrets, building, migrations, and startup:
 
 ```bash
-# 1. Clone the repository
 git clone https://github.com/tamzid958/ai-rails.git
 cd ai-rails
+chmod +x deploy.sh
+./deploy.sh
+```
 
-# 2. Configure environment
+The script walks you through 7 steps:
+
+1. **Prerequisites** — checks Docker, Docker Compose v2, and OpenSSL
+2. **Environment** — prompts for domain, database URL, secrets (auto-generated), OAuth, and access control
+3. **Validation** — ensures required vars aren't empty or placeholders
+4. **Build** — builds all Docker images in parallel
+5. **Migrations** — runs `prisma migrate deploy`
+6. **Start** — launches services and waits for health checks
+7. **Summary** — prints status table with URLs
+
+Re-running on an existing deployment is safe — it backs up `.env` before reconfiguring.
+
+## Local Development
+
+```bash
 cp .env.example .env
 # Edit .env — set AIRAILS_SECRET, AUTH_SECRET, and provider API keys
 
-# 3. Start all services
 docker compose up -d
 
-# 4. Run database migrations
-docker compose exec gateway npx prisma migrate deploy
-
-# 5. Verify services
+# Verify services
 curl http://localhost:8080/health   # gateway
 curl http://localhost:8081/health   # webhook
 curl http://localhost:3000           # dashboard
@@ -74,7 +88,7 @@ Set `PRODUCT_CREATION=owners` to restrict product creation to existing product o
 
 ```bash
 # Install the CLI (published to GitHub Packages)
-npm install -g @airails/cli --registry https://npm.pkg.github.com
+npm install -g @tamzid958/airails --registry https://npm.pkg.github.com
 
 # Initialize in your repo
 cd your-project
@@ -86,12 +100,15 @@ airails init
 # - Generate config files
 ```
 
-## Production Deployment
+## Manual Production Deployment
 
-Use the production Docker Compose overlay:
+If you prefer not to use `deploy.sh`, use the production Docker Compose overlay directly:
 
 ```bash
+cp .env.example .env
+# Edit .env with production values
+
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
-This adds resource limits, sets `NODE_ENV=production`, and configures connection pooling. See [configuration.md](configuration.md) for details.
+This adds resource limits, sets `NODE_ENV=production`, and configures structured logging. See [configuration.md](configuration.md) for details.

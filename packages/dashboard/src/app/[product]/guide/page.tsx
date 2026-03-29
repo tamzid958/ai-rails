@@ -162,7 +162,7 @@ export default function GuidePage() {
           <P>The AIRAILS CLI is used for commit tagging, IDE configuration, and managing your setup.</P>
 
           <H3>Install</H3>
-          <Code label="Terminal">{`npm install -g @airails/cli --registry https://npm.pkg.github.com`}</Code>
+          <Code label="Terminal">{`npm install -g @tamzid958/airails --registry https://npm.pkg.github.com`}</Code>
 
           <H3>Initialize in your repo</H3>
           <Code label="Terminal">{`cd your-project
@@ -217,7 +217,7 @@ OPENAI_API_KEY=airails_sk_xxxxxxxxxxxx`}</Code>
           <H3>Option B — Commit Tagging</H3>
           <P>Lightweight alternative if you can&apos;t proxy through the gateway.</P>
 
-          <Code label="Install">{`npm install -g @airails/cli --registry https://npm.pkg.github.com`}</Code>
+          <Code label="Install">{`npm install -g @tamzid958/airails --registry https://npm.pkg.github.com`}</Code>
 
           <Code label="Usage">{`# CLI wrapper
 airails commit --ai cursor -m "feat: add login"
