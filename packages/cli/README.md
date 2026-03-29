@@ -1,11 +1,11 @@
-# @airails/cli
+# @tamzid958/airails
 
 AI governance CLI for engineering teams. Captures AI tool usage, syncs prompt templates, and manages your AIRAILS setup.
 
 ## Install
 
 ```bash
-npm install -g @airails/cli --registry https://npm.pkg.github.com
+npm install -g @tamzid958/airails --registry https://npm.pkg.github.com
 ```
 
 Requires Node.js 20+.
