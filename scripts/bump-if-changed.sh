@@ -39,7 +39,7 @@ if echo "$CHANGED_FILES" | grep -q "^packages/shared/"; then
 fi
 
 if [ "$BUMPED" = true ]; then
-  git add packages/cli/package.json packages/shared/package.json 2>/dev/null || true
+  git add packages/cli/package.json packages/shared/package.json package-lock.json 2>/dev/null || true
   git commit --amend --no-edit --no-verify
   echo "✓ Versions bumped and commit amended"
 fi
