@@ -19,7 +19,11 @@ export default async function LoginPage() {
     }
 
     if (INVITE_ONLY) {
-      redirect("/waiting");
+      // Let the first user through on a fresh instance — no products exist yet
+      const totalProducts = await prisma.product.count();
+      if (totalProducts > 0) {
+        redirect("/waiting");
+      }
     }
 
     redirect("/products");
