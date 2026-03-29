@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { logPromptAudit } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   const engineer = await getEngineer();
@@ -35,15 +36,29 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Base not found" }, { status: 400 });
   }
 
+  const contentBefore = base.content;
+  const newVersion = base.version + 1;
+
   await prisma.$transaction([
     prisma.promptTemplate.update({
       where: { id: base.id },
       data: {
         content: override.content,
-        version: base.version + 1,
+        version: newVersion,
       },
     }),
   ]);
+
+  logPromptAudit({
+    productId,
+    promptTemplateId: base.id,
+    engineerId: engineer.id,
+    action: "PROMOTE",
+    version: newVersion,
+    contentBefore,
+    contentAfter: override.content,
+    metadata: { sourceOverrideId: overrideId, sourceEngineerId: override.engineerId },
+  });
 
   return NextResponse.json({ success: true });
 }

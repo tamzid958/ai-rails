@@ -60,6 +60,7 @@ model Product {
   prEvents       PrEvent[]
   recommendations Recommendation[]
   syncEvents     SyncEvent[]
+  promptAuditLogs PromptAuditLog[]
 }
 
 // ─── Engineer (global identity) ─────────────────────────────────────────────
@@ -78,6 +79,7 @@ model Engineer {
   prompts        PromptTemplate[]
   recommendations Recommendation[]
   syncEvents     SyncEvent[]
+  promptAuditLogs PromptAuditLog[]
 }
 
 // ─── ProductMembership (join table) ─────────────────────────────────────────
@@ -205,9 +207,33 @@ model PromptTemplate {
   children PromptTemplate[] @relation("PromptOverrides")
 
   activities AiActivity[]
+  auditLogs  PromptAuditLog[]
 
   @@unique([productId, taskType, engineerId, isBase])
   @@index([productId, taskType])
+}
+
+// ─── PromptAuditLog (immutable change history) ─────────────────────────────
+
+model PromptAuditLog {
+  id               String   @id @default(uuid())
+  productId        String
+  promptTemplateId String
+  engineerId       String
+  action           String   // CREATE_BASE | CREATE_OVERRIDE | UPDATE | PROMOTE | DELETE
+  version          Int
+  contentBefore    String?
+  contentAfter     String
+  metadata         Json?
+  createdAt        DateTime @default(now())
+
+  product        Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  promptTemplate PromptTemplate @relation(fields: [promptTemplateId], references: [id], onDelete: Cascade)
+  engineer       Engineer       @relation(fields: [engineerId], references: [id], onDelete: Cascade)
+
+  @@index([promptTemplateId, version])
+  @@index([productId, createdAt])
+  @@index([productId, engineerId])
 }
 
 // ─── PrEvent (PR outcome tracking) ─────────────────────────────────────────

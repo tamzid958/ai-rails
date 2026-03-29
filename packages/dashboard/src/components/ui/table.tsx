@@ -30,21 +30,25 @@ type TableHeadProps = { children: React.ReactNode; className?: string };
 
 function TableHead({ children, className }: TableHeadProps) {
   return (
-    <th className={clsx("text-left text-xs font-medium text-text-tertiary uppercase tracking-wide border-b border-border-muted py-3 px-3", className)}>
+    <th className={clsx("text-xs font-medium text-text-tertiary uppercase tracking-wide border-b border-border-muted py-3 px-3", !className?.includes("text-center") && "text-left", className)}>
       {children}
     </th>
   );
 }
 
-type TableCellProps = { children: React.ReactNode; className?: string; mono?: boolean };
+type TableCellProps = { children: React.ReactNode; className?: string; mono?: boolean; colSpan?: number; style?: React.CSSProperties };
 
-function TableCell({ children, className, mono = false }: TableCellProps) {
+function TableCell({ children, className, mono = false, colSpan, style }: TableCellProps) {
   return (
-    <td className={clsx(
-      "py-3 px-3 text-sm text-text-secondary",
-      mono && "font-mono text-xs text-text-tertiary",
-      className,
-    )}>
+    <td
+      colSpan={colSpan}
+      style={style}
+      className={clsx(
+        "py-3 px-3 text-sm text-text-secondary",
+        mono && "font-mono text-xs text-text-tertiary",
+        className,
+      )}
+    >
       {children}
     </td>
   );

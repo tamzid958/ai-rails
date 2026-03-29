@@ -199,11 +199,16 @@ export type TeamPromptRow = {
 export type DriftEngineerRow = {
   id: string;
   name: string;
+  driftScore: "NONE" | "LOW" | "MEDIUM" | "HIGH";
+  modelDrift: string[];
+  templateDrift: string[];
+  hasGateway: boolean;
+  hasTagging: boolean;
   overrideCount: number;
   totalBases: number;
-  driftScore: "NONE" | "LOW" | "MEDIUM" | "HIGH";
   lastSync: string | null;
   toolsSynced: string[];
+  details: string[];
 };
 
 export type TeamCostStats = {
@@ -344,6 +349,31 @@ export type ToolLeaderboardRow = {
   revisionRate: number;
   rejectionRate: number;
   sampleSize: number;
+};
+
+// ── Audit types ──
+
+export type AuditAction = "CREATE_BASE" | "CREATE_OVERRIDE" | "UPDATE" | "PROMOTE" | "DELETE";
+
+export type AuditLogRow = {
+  id: string;
+  action: AuditAction;
+  version: number;
+  contentBefore: string | null;
+  contentAfter: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+  engineerId: string;
+  engineerName: string;
+  templateId: string;
+  templateName: string;
+  taskType: string;
+  acceptanceRate: number | null;
+};
+
+export type AuditLogResponse = {
+  items: AuditLogRow[];
+  cursor: string | null;
 };
 
 // ── Recommendation types ──
@@ -750,6 +780,19 @@ export const api = {
     return fetchJson<{ items: RecommendationRow[]; total: number; limit: number; offset: number }>(
       `/api/recommendations/team?productId=${productId}&limit=${limit}&offset=${offset}`,
     );
+  },
+
+  getPromptAudit(productId: string, params?: { promptTemplateId?: string; engineerId?: string; action?: string; cursor?: string }) {
+    const qs = new URLSearchParams({ productId });
+    if (params?.promptTemplateId) qs.set("promptTemplateId", params.promptTemplateId);
+    if (params?.engineerId) qs.set("engineerId", params.engineerId);
+    if (params?.action) qs.set("action", params.action);
+    if (params?.cursor) qs.set("cursor", params.cursor);
+    return fetchJson<AuditLogResponse>(`/api/team/audit?${qs.toString()}`);
+  },
+
+  triggerJob(productId: string, job: string) {
+    return postJson<{ success: boolean }>(`/api/jobs`, { productId, job });
   },
 
   dismissRecommendation(id: string) {

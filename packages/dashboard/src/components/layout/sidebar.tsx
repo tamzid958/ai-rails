@@ -51,6 +51,7 @@ function buildSections(productSlug: string, canManageTeam: boolean): NavSection[
         { label: "Engineers", href: `${base}/team/engineers`, icon: Zap },
         { label: "Prompts", href: `${base}/team/prompts`, icon: FileText },
         { label: "Drift", href: `${base}/team/drift`, icon: AlertTriangle },
+        { label: "Audit", href: `${base}/team/audit`, icon: BookOpen },
         { label: "Costs", href: `${base}/team/costs`, icon: DollarSign },
         { label: "Outcomes", href: `${base}/team/outcomes`, icon: CheckCircle },
       ],

@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getEngineer } from "@/lib/auth";
 import { prisma } from "@airails/shared";
+import { logPromptAudit } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   const engineer = await getEngineer();
@@ -94,6 +95,16 @@ export async function POST(request: NextRequest) {
       revisionRate: 0,
       rejectionRate: 0,
     },
+  });
+
+  logPromptAudit({
+    productId,
+    promptTemplateId: override.id,
+    engineerId: engineer.id,
+    action: "CREATE_OVERRIDE",
+    version: 1,
+    contentAfter: content,
+    metadata: { baseTemplateId: base.id, baseTaskType: base.taskType },
   });
 
   return NextResponse.json({ id: override.id, taskType: override.taskType });
