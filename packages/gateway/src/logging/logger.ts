@@ -12,12 +12,27 @@ function shouldLogPrompts(): boolean {
 interface GatewayLogInput {
   context: ProductContext;
   request: ChatCompletionRequest;
-  response: { usage?: LlmUsage; model?: string };
+  response: {
+    usage?: LlmUsage;
+    model?: string;
+    _hidden_params?: { response_cost?: number };
+    response_cost?: number;
+    responseCost?: number;
+  };
   latencyMs: number;
   isStreaming?: boolean;
   headers: IncomingHttpHeaders;
   templateId?: string | null;
   isOverride?: boolean;
+}
+
+function extractActualCost(response: GatewayLogInput["response"]): number | undefined {
+  return (
+    response._hidden_params?.response_cost ??
+    response.response_cost ??
+    response.responseCost ??
+    undefined
+  );
 }
 
 export async function logGatewayActivity(input: GatewayLogInput): Promise<void> {
@@ -26,6 +41,8 @@ export async function logGatewayActivity(input: GatewayLogInput): Promise<void> 
   const systemPromptContent = request.messages.find(
     (m) => m.role === "system",
   )?.content;
+
+  const actualCost = extractActualCost(response);
 
   try {
     await prisma.aiActivity.create({
@@ -53,12 +70,14 @@ export async function logGatewayActivity(input: GatewayLogInput): Promise<void> 
           request.model,
           response.usage?.prompt_tokens ?? 0,
           response.usage?.completion_tokens ?? 0,
+          actualCost,
         ),
         branchName: (headers["x-airails-branch"] as string) ?? null,
         metadata: {
           latencyMs,
           isStreaming: isStreaming ?? false,
           ...(input.isOverride ? { isOverride: true } : {}),
+          ...(actualCost != null ? { actualCost } : {}),
         },
       },
     });

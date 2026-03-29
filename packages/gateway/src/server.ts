@@ -94,19 +94,37 @@ app.get("/health", async (): Promise<HealthResponse> => ({
   uptime: process.uptime(),
 }));
 
-// Health check — readiness (verifies DB connectivity)
+// Health check — readiness (verifies DB + LiteLLM connectivity)
 app.get("/health/ready", async (_request, reply) => {
+  const checks: Record<string, "ok" | "error"> = {};
+
   try {
     await prisma.$queryRaw`SELECT 1`;
-    return { status: "ok", service: "gateway", uptime: process.uptime() };
-  } catch (err) {
-    app.log.error(err, "Readiness check failed");
+    checks.database = "ok";
+  } catch {
+    checks.database = "error";
+  }
+
+  try {
+    const litellmUrl = process.env["LITELLM_URL"] ?? "http://localhost:4000";
+    const res = await fetch(`${litellmUrl}/health/liveliness`, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    checks.litellm = res.ok ? "ok" : "error";
+  } catch {
+    checks.litellm = "error";
+  }
+
+  const allOk = Object.values(checks).every((v) => v === "ok");
+  if (!allOk) {
     return reply.status(503).send({
       status: "error",
       service: "gateway",
-      message: "Database connectivity check failed",
+      checks,
     });
   }
+
+  return { status: "ok", service: "gateway", checks, uptime: process.uptime() };
 });
 
 // LLM proxy routes

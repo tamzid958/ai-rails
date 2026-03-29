@@ -108,7 +108,7 @@ export default function ProvidersPage() {
     <div className="space-y-8 animate-fade-in">
       <PageHeader
         title="Providers"
-        description="Manage which AI models are available for this product."
+        description="Manage which AI models are available for this product. Models added here persist until LiteLLM restarts — add them to litellm/config.yaml for permanence."
         actions={canManage ? (
           <Button size="sm" onClick={() => setAddOpen(true)}>
             <Plus size={14} strokeWidth={1.5} className="mr-1" /> Add Model

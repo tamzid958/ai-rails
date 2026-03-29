@@ -27,9 +27,13 @@ export interface ChatCompletionResponse {
   model: string;
   choices: { message: ChatMessage; finish_reason: string; index: number }[];
   usage?: LlmUsage;
+  // LiteLLM cost fields
+  _hidden_params?: { response_cost?: number };
+  response_cost?: number;
 }
 
 export interface StreamSummary {
   model?: string;
   usage?: LlmUsage;
+  responseCost?: number;
 }

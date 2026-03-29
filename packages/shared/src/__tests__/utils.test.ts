@@ -74,6 +74,26 @@ describe("estimateCost", () => {
     const cost = estimateCost("unknown-model", 1000, 500);
     expect(cost).toBe(0);
   });
+
+  it("should_prefer_actual_cost_from_litellm", () => {
+    const cost = estimateCost("gpt-4o", 1000, 500, 0.042);
+    expect(cost).toBe(0.042);
+  });
+
+  it("should_fall_back_to_estimate_when_actual_is_zero", () => {
+    const cost = estimateCost("gpt-4o", 1000, 500, 0);
+    expect(cost).toBeCloseTo(0.0075, 4);
+  });
+
+  it("should_strip_provider_prefix_for_lookup", () => {
+    const cost = estimateCost("openai/gpt-4o", 1000, 500);
+    expect(cost).toBeCloseTo(0.0075, 4);
+  });
+
+  it("should_fuzzy_match_model_names", () => {
+    const cost = estimateCost("claude-sonnet-4-6-20250620", 1000, 500);
+    expect(cost).toBeGreaterThan(0);
+  });
 });
 
 describe("slugify", () => {

@@ -22,6 +22,28 @@ model_list:
 litellm_settings:
   drop_params: true
   set_verbose: false
+  num_retries: 2
+  request_timeout: 30
+  retry_after: 5
+  cache: true
+  cache_params:
+    type: redis
+    host: redis
+    port: 6379
+
+  # Fallback chain — if primary model fails, try these
+  default_fallbacks:
+    - gpt-4o-mini
+
+router_settings:
+  enable_pre_call_checks: true
+  retry_policy:
+    RateLimitError:
+      num_retries: 3
+      retry_after: 10
+    ContentPolicyViolationError:
+      num_retries: 0
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
+  enable_model_discovery: true

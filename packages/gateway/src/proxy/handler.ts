@@ -7,27 +7,59 @@ import { StreamCollector } from "./stream-collector.js";
 import { LITELLM_URL, LITELLM_MASTER_KEY } from "./config.js";
 import type { ChatCompletionRequest, ChatCompletionResponse } from "./types.js";
 
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
+const RETRYABLE_STATUSES = new Set([429, 503, 502]);
+
 async function forwardToLiteLLM(
   path: string,
   body: unknown,
 ): Promise<Response> {
-  try {
-    return await fetch(`${LITELLM_URL}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(LITELLM_MASTER_KEY
-          ? { Authorization: `Bearer ${LITELLM_MASTER_KEY}` }
-          : {}),
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30_000),
-    });
-  } catch {
-    const err = new Error("LiteLLM service unavailable");
-    (err as Error & { statusCode: number }).statusCode = 502;
-    throw err;
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (LITELLM_MASTER_KEY) {
+    headers["Authorization"] = `Bearer ${LITELLM_MASTER_KEY}`;
   }
+
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const response = await fetch(`${LITELLM_URL}${path}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(30_000),
+      });
+
+      // Retry on transient errors (429 rate limit, 502/503 overload)
+      if (RETRYABLE_STATUSES.has(response.status) && attempt < MAX_RETRIES) {
+        const retryAfter = response.headers.get("retry-after");
+        const delay = retryAfter
+          ? Math.min(parseInt(retryAfter, 10) * 1000, 10_000)
+          : RETRY_DELAY_MS * 2 ** attempt;
+        await new Promise((r) => setTimeout(r, delay));
+        continue;
+      }
+
+      return response;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS * 2 ** attempt));
+        continue;
+      }
+    }
+  }
+
+  const err = new Error(
+    lastError?.name === "TimeoutError"
+      ? "LiteLLM request timed out (30s)"
+      : "LiteLLM service unavailable",
+  );
+  (err as Error & { statusCode: number }).statusCode = 502;
+  throw err;
 }
 
 export async function handleChatCompletions(
@@ -116,10 +148,17 @@ async function handleStream(
 
   const latencyMs = Date.now() - startTime;
 
+  // Extract cost from LiteLLM response header (available for streaming)
+  const headerCost = response.headers.get("x-litellm-response-cost");
+  const summary = collector.toSummary();
+  if (headerCost) {
+    summary.responseCost = parseFloat(headerCost);
+  }
+
   logGatewayActivity({
     context,
     request: body,
-    response: collector.toSummary(),
+    response: summary,
     latencyMs,
     isStreaming: true,
     headers: request.headers,
