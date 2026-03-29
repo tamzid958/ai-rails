@@ -285,6 +285,8 @@ export type MemberRow = {
   email: string;
   gitUsername: string | null;
   role: "OWNER" | "LEAD" | "MEMBER";
+  activationStatus?: string;
+  starterKey?: string;
   createdAt: string;
 };
 

@@ -20,7 +20,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Avatar } from "@/components/ui/avatar";
 import { Tooltip } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Plus, MoreHorizontal, Shield, Trash2, Users, UserPlus, Clock } from "lucide-react";
+import { Plus, MoreHorizontal, Shield, Trash2, Users, UserPlus, Clock, Copy, Check } from "lucide-react";
 
 const ROLE_VARIANT = { OWNER: "info", LEAD: "success", MEMBER: "default" } as const;
 
@@ -36,6 +36,8 @@ export default function MembersPage() {
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [roleChangeTarget, setRoleChangeTarget] = useState<{ membershipId: string; name: string; currentRole: string } | null>(null);
   const [selectedNewRole, setSelectedNewRole] = useState("");
+  const [inviteResult, setInviteResult] = useState<{ name: string; email: string; starterKey: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const { data: members, isLoading } = useQuery({
     queryKey: ["settings-members", product.id],
@@ -45,7 +47,14 @@ export default function MembersPage() {
 
   const addMutation = useMutation({
     mutationFn: () => api.addMember(product.id, email.trim(), role),
-    onSuccess: () => { setEmail(""); setRole("MEMBER"); setEmailError(""); setAddError(""); setAddOpen(false); queryClient.invalidateQueries({ queryKey: ["settings-members"] }); },
+    onSuccess: (data) => {
+      setAddOpen(false);
+      if (data.starterKey) {
+        setInviteResult({ name: data.name, email: data.email, starterKey: data.starterKey });
+      }
+      setEmail(""); setRole("MEMBER"); setEmailError(""); setAddError("");
+      queryClient.invalidateQueries({ queryKey: ["settings-members"] });
+    },
     onError: (err: Error) => setAddError(err.message),
   });
 
@@ -73,7 +82,10 @@ export default function MembersPage() {
 
   const quickAddMutation = useMutation({
     mutationFn: (pendingEmail: string) => api.addMember(product.id, pendingEmail, "MEMBER"),
-    onSuccess: () => {
+    onSuccess: (data) => {
+      if (data.starterKey) {
+        setInviteResult({ name: data.name, email: data.email, starterKey: data.starterKey });
+      }
       queryClient.invalidateQueries({ queryKey: ["settings-members"] });
       queryClient.invalidateQueries({ queryKey: ["settings-members-pending"] });
     },
@@ -269,6 +281,64 @@ export default function MembersPage() {
         onConfirm={() => removeId && removeMutation.mutate(removeId)}
         onCancel={() => setRemoveId(null)}
       />
+
+      {/* Invite Result — share key + activation link */}
+      <Dialog open={inviteResult !== null} onOpenChange={() => { setInviteResult(null); setCopied(false); }}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Member Added</DialogTitle>
+            <DialogDescription>
+              Share these credentials with <strong>{inviteResult?.name}</strong> ({inviteResult?.email}) so they can get started.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">API Key</label>
+              <div className="mt-1 flex items-center gap-2">
+                <code className="flex-1 text-xs font-mono bg-surface-raised border border-border-subtle rounded-md px-3 py-2 text-text-primary break-all">
+                  {inviteResult?.starterKey}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (inviteResult?.starterKey) {
+                      navigator.clipboard.writeText(inviteResult.starterKey);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }
+                  }}
+                >
+                  {copied ? <Check size={14} className="text-success" /> : <Copy size={14} />}
+                </Button>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Activation Link</label>
+              <div className="mt-1 flex items-center gap-2">
+                <code className="flex-1 text-xs font-mono bg-surface-raised border border-border-subtle rounded-md px-3 py-2 text-text-primary break-all">
+                  {typeof window !== "undefined" ? `${window.location.origin}/${product.slug}/guide` : ""}
+                </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/${product.slug}/guide`);
+                  }}
+                >
+                  <Copy size={14} />
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-text-tertiary">
+              This key is shown only once. The member can use it to configure the CLI or gateway proxy.
+            </p>
+          </DialogBody>
+          <DialogFooter>
+            <Button onClick={() => { setInviteResult(null); setCopied(false); }}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
