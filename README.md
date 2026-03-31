@@ -68,6 +68,23 @@ flowchart TD
 
 ## Quick Start
 
+### CLI
+
+```bash
+npm install -g airails-cli
+```
+
+```bash
+airails init --gateway https://your-airails-instance.com   # point to your deployment
+airails config set --api-key <your-key>
+airails doctor            # verify setup
+airails sync              # generate IDE configs from prompt templates
+```
+
+The gateway URL is saved in `.airails/config.yml` and used for all subsequent commands. Defaults to `http://localhost:8080` if omitted.
+
+See [packages/cli/README.md](packages/cli/README.md) for the full command reference.
+
 ### Production Deploy
 
 ```bash

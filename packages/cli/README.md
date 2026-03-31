@@ -1,11 +1,11 @@
-# @tamzid958/airails
+# airails-cli
 
 AI governance CLI for engineering teams. Captures AI tool usage, syncs prompt templates, and manages your AIRAILS setup.
 
 ## Install
 
 ```bash
-npm install -g @tamzid958/airails --registry https://npm.pkg.github.com
+npm install -g airails-cli
 ```
 
 Requires Node.js 20+.
@@ -13,8 +13,8 @@ Requires Node.js 20+.
 ## Quick Start
 
 ```bash
-# Initialize in your repo
-airails init
+# Initialize and point to your AIRails deployment (defaults to http://localhost:8080)
+airails init --gateway https://your-airails-instance.com
 
 # Configure your API key
 airails config set --api-key <your-key>

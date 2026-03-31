@@ -1,6 +1,6 @@
 {
   "name": "@airails/shared",
-  "version": "0.1.1-alpha.1",
+  "version": "0.1.1-alpha.2",
   "license": "BUSL-1.1",
   "description": "Shared utilities for the AIRails platform",
   "type": "module",
@@ -21,7 +21,7 @@
     "directory": "packages/shared"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public"
   },
   "scripts": {
     "build": "prisma generate --schema ../../prisma/schema.prisma && tsc",

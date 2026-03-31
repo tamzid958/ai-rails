@@ -1,6 +1,6 @@
 {
-  "name": "@tamzid958/airails",
-  "version": "1.0.0-alpha.4",
+  "name": "airails-cli",
+  "version": "1.0.0-alpha.5",
   "license": "BUSL-1.1",
   "description": "AI governance CLI for engineering teams",
   "type": "module",
@@ -20,7 +20,7 @@
     "directory": "packages/cli"
   },
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
+    "access": "public"
   },
   "scripts": {
     "build": "tsc",
