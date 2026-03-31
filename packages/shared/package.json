@@ -1,6 +1,6 @@
 {
   "name": "@airails/shared",
-  "version": "0.1.1-alpha.2",
+  "version": "0.1.1-alpha.3",
   "license": "BUSL-1.1",
   "description": "Shared utilities for the AIRails platform",
   "type": "module",
